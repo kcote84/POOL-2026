@@ -29,7 +29,7 @@ test('extrait sept noms exacts, liens de formations, totaux et écarts de la cap
   assert.equal(standing.participants.length, 7);
   assert.equal(standing.season, '2026-2027');
   assert.ok(standing.participants.some(p => p.name === 'Sandor Cleagan'));
-  assert.equal(standing.participants[0].name, 'Sir Jorah');
+  assert.equal(standing.participants[0].name, 'Podrick Payne');
   for (const p of standing.participants) {
     assert.equal(new URL(p.sourceUrl).searchParams.get('no')?.split('|')[0], p.id);
     assert.equal(p.gap, standing.participants[0].points - p.points);
@@ -54,6 +54,43 @@ test('les points des gardiens proviennent de TOT, distinct de leurs victoires', 
   const wins = goalies.columns.find(c => c.label === 'V')!;
   assert.equal(goalies.entries.reduce((n, e) => n + e.stats[wins.key], 0), 1);
 });
+test('la victoire des Panthers en prolongation vaut les deux points de TOT, sans double comptage', () => {
+  const p = standing.participants.find(p => p.name === 'Sir Jorah')!;
+  const teams = parseRoster(rosterHtml.get(p.id)!, p, standing.season).groups.find(g => g.name === 'ÉQUIPES')!;
+  const florida = teams.entries.find(e => e.name === 'Florida Panthers')!;
+  const stat = (label: string) => florida.stats[teams.columns.find(c => c.label === label)!.key];
+  assert.equal(stat('PJ'), 1); assert.equal(stat('V'), 0); assert.equal(stat('VP'), 1);
+  assert.equal(florida.points, 2); assert.equal(teams.total, 2);
+  assert.equal(teams.totals![teams.columns.find(c => c.label === 'MOY')!.key], 2);
+});
+test('refuse la capture Marqueur ancienne qui comptait une partie des Panthers comme deux victoires', async () => {
+  const p = standing.participants.find(p => p.name === 'Sir Jorah')!;
+  const old = await fixture('roster-panthers-double-count');
+  assert.throws(() => parseRoster(old, p, standing.season), /Florida Panthers.*dépassent/);
+});
+test('les totaux de PJ et MOY viennent des tableaux Marqueur, avec rejet des divergences', () => {
+  for (const p of standing.participants) {
+    const roster = parseRoster(rosterHtml.get(p.id)!, p, standing.season);
+    assert.equal(roster.groups.reduce((sum, g) => sum + g.totals![g.columns.find(c => c.label === 'PJ')!.key], 0), p.games);
+    assert.throws(() => parseRoster(rosterHtml.get(p.id)!, {...p, games: p.games + 1}, standing.season), /parties jouées/);
+  }
+});
+test('une victoire comptée deux fois ne remplace jamais les deux points Panthers déjà validés', async () => {
+  let bad = false;
+  const old = await fixture('roster-panthers-double-count');
+  const cache = await createCache(async url => bad && new URL(url).searchParams.get('no')?.startsWith('1252756|') ? old : fixtureFetcher(url));
+  await cache.refresh(); const correct = structuredClone(cache.snapshot);
+  bad = true; await delay(5); await cache.refresh();
+  assert.deepEqual(cache.snapshot, correct); assert.match(cache.error!, /Florida Panthers.*dépassent/);
+  const corrupt = structuredClone(correct!);
+  const teams = corrupt.rosters['1252756'].data.groups.find(g => g.name === 'ÉQUIPES')!;
+  teams.entries[0].stats[teams.columns.find(c => c.label === 'V')!.key] = 1;
+  assert.equal(validateSnapshot(corrupt), false);
+  const invalidGames = structuredClone(correct!);
+  const group = invalidGames.rosters['1252756'].data.groups[0];
+  group.totals![group.columns.find(c => c.label === 'PJ')!.key] += 1;
+  assert.equal(validateSnapshot(invalidGames), false);
+});
 test('les valeurs absentes affichées par un tiret sont zéro, les cellules vides sont refusées', () => {
   assert.equal(number('-'), 0); assert.equal(number('1,50'), 1.5);
   for (const value of ['', 'NaN', 'erreur', '12 points']) assert.throws(() => number(value));
@@ -71,6 +108,7 @@ test('refuse une formation d’un autre participant, une autre saison et des tot
   assert.throws(() => parseRoster(html.replaceAll('GREYWORM', 'BRONN'), p, standing.season));
   assert.throws(() => parseRoster(html.replaceAll('2026-2027', '2025-2026'), p, standing.season));
   assert.throws(() => parseRoster(html, { ...p, points: 500 }, standing.season));
+  assert.throws(() => parseRoster(html + '<select id="id_parametre"><option value="999" selected>Autre barème</option></select>', p, standing.season), /paramètre/);
 });
 test('refuse le quotidien non daté, accepte uniquement une date explicite', () => {
   assert.throws(() => parseDaily(dailyHtml), /date/);

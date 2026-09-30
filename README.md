@@ -24,12 +24,22 @@ npm run dev
 ## Ce qui fonctionne avec Marqueur
 
 - Classement cumulatif des sept participants, points du pool, ordre et écart fourni par Marqueur ; meneur et éventuelles égalités mis en valeur.
+- Parties jouées (**PJ**) et moyenne de points du pool par partie (**MOY**) fournis par Marqueur. PJ correspond au cumul des matchs des sélections, pas au nombre de journées. Sur téléphone, ces valeurs sont visibles sous chaque participant sans défilement horizontal. Les catégories joueurs/gardiens/équipes peuvent être comparées dans « Répartition des points ».
 - Liens des formations extraits du classement, jamais inventés. Orthographe des pseudonymes conservée depuis le titre des liens Marqueur. Les prénoms et noms abrégés fournis par les participants apparaissent sous les personnages.
 - Sept formations de 24 sélections à la validation initiale : joueurs, gardiens et équipes. Statistiques disponibles, choix de repêchage et statut lorsqu’il est indiqué.
+- Recherche par nom ou équipe, tri par points, moyenne ou matchs joués. Les totaux de chaque colonne sont extraits de Marqueur ; ils restent ceux de la catégorie complète pendant une recherche. Un sommaire présente PJ, moyenne et points par catégorie. « Ma maison » mémorise une formation favorite dans ce navigateur, sans compte.
 - Points de chaque sélection extraits de la colonne **TOT** ; totaux de chaque catégorie et sommaire conservés. Aucun calcul à partir des simples points de la LNH. Les points du pool sont la première colonne numérique sur téléphone.
 - Navigation clavier, onglets avec flèches, lien d’évitement, prise en compte des mouvements réduits, polices locales et ornements SVG originaux. Portraits des personnages en avatars circulaires, avec un petit blason ; sources dans `public/avatars/SOURCES.md`.
 
 Personnages et participants : Sir Jorah → Martin C., Podrick Payne → Martin L, Lord Baelish → Jean-Pascal, Ned Stark → Steve, Sandor Cleagan → Alexandre, Greyworm → Kev, Bronn → Gabriel. À la demande du groupe, **Ned Stark garde son nom mais utilise le portrait d’Arya Stark**. Cette présentation est définie dans `src/participants.ts` et ne modifie pas les données Marqueur.
+
+L’ouverture présente une illustration de Drogon, avec un souffle de feu et des braises animés par canvas. Elle dure environ 4,6 secondes après le chargement de l’image, une seule fois par session, sans son. Le bouton « Entrer dans le royaume » et Échap permettent de passer l’introduction. Elle est désactivée automatiquement avec les mouvements réduits ; le site charge ses données en parallèle. Une erreur d’image ou un chargement trop lent ferme l’introduction. « Revoir le dragon » se trouve en pied de page. L’illustration générée, son prompt et ses détails sont documentés dans `public/DRAGON.md`.
+
+## Correction des points des Panthers — 30 septembre 2026
+
+La capture publique de Marqueur de 09:55 UTC présentait pour Florida dans la formation de Sir Jorah : **PJ = 1, V = 1, VP = 1, TOT = 4**. Le site reprenait ce TOT. La capture de 21:01 UTC et l’instantané public consulté lors de l’enquête indiquent **PJ = 1, V = 0, VP = 1, TOT = 2**. Le barème et le lien de formation utilisent toujours le paramètre `p=257924`. L’écart constaté provenait donc de l’ancienne donnée source, qui comptait la même partie dans deux types de victoires.
+
+L’extracteur refuse désormais une ligne de gardien ou d’équipe dont les victoires/défaites détaillées dépassent les parties jouées, ainsi qu’un paramètre de formation différent du lien du classement. Le dernier résultat valide est conservé lors du rejet. Il ne divise jamais les points par deux et ne remplace pas les totaux calculés par Marqueur. Des tests distincts utilisent la capture corrigée et l’ancienne capture incohérente ; aucune fixture n’est publiée comme résultat actuel. La date de récupération et les avertissements sont désormais placés en haut des pages.
 
 Les pages publiques ont été testées par HTTP depuis Node sans cookies ni connexion le **30 septembre 2026**. Aucune API officielle n’est utilisée. Leur disponibilité et leur format peuvent évoluer.
 

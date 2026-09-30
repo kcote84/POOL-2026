@@ -1,0 +1,24 @@
+.dragon-intro{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;overflow:hidden;color:#f3e9d4;background:#070909;opacity:1;transition:opacity .4s ease;isolation:isolate}
+.dragon-intro::backdrop{background:#070909}
+.dragon-intro.intro-leaving{opacity:0;pointer-events:none}
+.intro-seal{position:absolute;z-index:4;top:6%;left:50%;transform:translateX(-50%);display:flex;gap:14px;align-items:center;color:#dfc99a;white-space:nowrap}
+.intro-seal>span{font:12px var(--serif);letter-spacing:3px}.intro-seal small{display:block;font:9px Manrope,sans-serif;letter-spacing:4px;text-align:center;margin-top:9px;color:#c7c0b1}
+.dragon-stage{position:absolute;left:50%;top:49%;width:min(1400px,110vw);aspect-ratio:3/2;transform:translate(-65%,-50%);opacity:0;transform-origin:78% 36%}
+.intro-ready .dragon-stage{animation:dragon-awake 4.6s ease-out both}
+.dragon-image{position:absolute;width:100%;height:100%;object-fit:contain;mask-image:linear-gradient(to right,transparent,black 12%,black 90%,transparent)}
+.dragon-fire{position:absolute;inset:0;width:160%;height:100%;pointer-events:none}
+.intro-vignette{position:absolute;inset:0;z-index:2;background:linear-gradient(to bottom,#07090980,transparent 20%,transparent 48%,#070909cc 73%,#070909 95%),radial-gradient(ellipse at 50% 45%,transparent 25%,#07090988 90%);pointer-events:none}
+.intro-flare{position:absolute;inset:0;z-index:3;opacity:0;background:radial-gradient(ellipse at 100% 38%,#e986262f,transparent 75%);pointer-events:none}
+.intro-ready .intro-flare{animation:dragon-flare 4.6s ease both}
+.intro-copy{position:absolute;z-index:4;left:50%;bottom:19%;width:90%;transform:translateX(-50%);text-align:center;text-shadow:0 3px 24px #000}
+.intro-copy>p{font-size:9px;letter-spacing:3.8px;color:#d1b17a;margin-bottom:20px}.intro-copy h2{font:500 clamp(35px,5vw,66px)/1.12 var(--serif);letter-spacing:-1px}.intro-copy h2 em{font-style:normal;color:#e4bb76}.intro-copy>span{display:block;margin-top:18px;font-size:12px;letter-spacing:1px;color:#c5c0b7}
+.intro-skip{position:absolute;z-index:5;bottom:6%;left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:14px;border:1px solid #a88750;padding:14px 22px;min-height:48px;background:#151816e8;color:#f4d99d;font-size:12px;white-space:nowrap}.intro-skip:hover{background:#31271a;color:#fff1cb}.intro-skip:focus-visible{outline:2px solid #f0ce91;outline-offset:5px}
+.intro-progress{position:absolute;bottom:0;left:0;right:0;height:2px;background:#30271b;z-index:5}.intro-progress>span{display:block;width:0;height:100%;background:#dba552}.intro-ready .intro-progress>span{animation:dragon-progress 4.6s linear both}
+@keyframes dragon-awake{0%{opacity:0;transform:translate(-65%,-50%) scale(.96)}18%{opacity:1}80%{opacity:1;transform:translate(-65%,-50%) scale(1.025)}100%{opacity:.85;transform:translate(-65%,-50%) scale(1.04)}}
+@keyframes dragon-flare{0%,15%,90%,100%{opacity:0}35%,63%{opacity:1}}
+@keyframes dragon-progress{to{width:100%}}
+@media(max-width:700px){.dragon-stage{width:180vw;top:43%}.intro-ready .dragon-stage{animation-name:dragon-awake-mobile}.intro-seal{top:7%}.intro-seal>span{font-size:10px;letter-spacing:2px}.intro-copy{bottom:23%}.intro-copy>p{font-size:8px;letter-spacing:2.3px}.intro-copy h2{font-size:42px}.intro-copy>span{font-size:11px}.intro-skip{bottom:9%;font-size:11px;padding:14px 18px}.intro-vignette{background:linear-gradient(to bottom,#07090944,transparent 23%,transparent 42%,#070909bb 59%,#070909 87%)}}
+@keyframes dragon-awake-mobile{0%{opacity:0;transform:translate(-72%,-50%) scale(.96)}18%{opacity:1}80%{opacity:1;transform:translate(-72%,-50%) scale(1.025)}100%{opacity:.85;transform:translate(-72%,-50%) scale(1.04)}}
+@media(max-height:560px) and (min-width:701px){.intro-seal{top:6%;left:10%;transform:none}.intro-copy{left:73%;bottom:27%;width:45%}.intro-copy h2{font-size:38px}.intro-copy>p{font-size:7px;letter-spacing:2px}.intro-skip{left:73%;bottom:9%}.dragon-stage{top:58%;width:100vw;left:43%}}
+@media(prefers-reduced-motion:reduce){.dragon-intro{transition:none}.intro-ready .dragon-stage{animation:none;opacity:1}.dragon-fire,.intro-flare,.intro-progress{display:none}}
+@media(max-width:700px){.intro-copy h2{font-size:clamp(30px,10.5vw,42px)}}

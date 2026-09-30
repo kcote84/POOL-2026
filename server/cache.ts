@@ -1,7 +1,7 @@
 import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type { ApiResponse, Snapshot, Standing, Roster, Daily } from '../shared/types';
-import { DAILY_URL, STANDING_URL, parseDaily, parseRoster, parseStanding, safeSource } from './parser';
+import { DAILY_URL, STANDING_URL, assertSelectionStats, parseDaily, parseRoster, parseStanding, safeSource } from './parser';
 
 export interface Config { intervalMs: number; staleMs: number; timeoutMs: number; cacheFile: string }
 export type FetchHtml = (url: string) => Promise<string>;
@@ -28,10 +28,20 @@ export function validateSnapshot(value: unknown): value is Snapshot {
       if (new URL(safeSource(p.sourceUrl)).searchParams.get('no')?.split('|')[0] !== p.id) return false;
       const cached = s.rosters[p.id], r = cached?.data;
       if (!cached || !stamp(cached.fetchedAt) || !r || r.participantId !== p.id || r.name !== p.name || r.season !== s.standing.data.season || r.total !== p.points || r.sourceUrl !== p.sourceUrl || !r.groups.length || r.groups.reduce((n, g) => n + g.total, 0) !== r.total) return false;
+      if ((r.games !== undefined && r.games !== p.games) || (r.average !== undefined && r.average !== p.average)) return false;
+      if (r.groups.find(g => g.name === 'GARDIENS')?.total !== p.goalies || r.groups.find(g => g.name === 'ÉQUIPES')?.total !== p.teams || r.groups.filter(g => ['JOUEURS', 'ATTAQUANTS', 'DÉFENSEURS'].includes(g.name)).reduce((sum, g) => sum + g.total, 0) !== p.players || new Set(r.groups.map(g => g.name)).size !== r.groups.length) return false;
       for (const g of r.groups) {
         if (!g.name || !finite(g.total) || !g.entries.length || !g.columns.length) return false;
-        for (const e of g.entries) if (!e.name || !finite(e.points) || !Object.values(e.stats).every(finite)) return false;
+        for (const e of g.entries) {
+          if (!e.name || !finite(e.points) || !Object.values(e.stats).every(finite) || e.points !== e.stats[g.columns.find(c => c.label === 'TOT')!.key]) return false;
+          assertSelectionStats(g.columns, e.stats, e.name);
+        }
+        if (g.totals) {
+          assertSelectionStats(g.columns, g.totals, g.name);
+          if (g.totals[g.columns.find(c => c.label === 'TOT')!.key] !== g.total) return false;
+        }
       }
+      if (r.groups.every(g => g.totals) && r.groups.reduce((sum, g) => sum + g.totals![g.columns.find(c => c.label === 'PJ')!.key], 0) !== p.games) return false;
     }
     if (s.daily !== null && (!stamp(s.daily.fetchedAt) || !/^\d{1,2} [A-ZÀ-Ü]+ \d{4}$/.test(s.daily.data.date) || s.daily.data.sourceUrl !== DAILY_URL || s.daily.data.participants.length !== 7 || s.daily.data.participants.some(p => !finite(p.points) || !ps.some(q => q.id === p.id)))) return false;
     return true;

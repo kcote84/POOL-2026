@@ -1,5 +1,5 @@
 import { load, type CheerioAPI } from 'cheerio';
-import type { Daily, Participant, Roster, RosterGroup, Standing } from '../shared/types';
+import type { Daily, Participant, Roster, RosterGroup, Standing, StatColumn } from '../shared/types';
 
 export const STANDING_URL = 'https://www.marqueur.com/hockey/mbr/tools/pool/standing_03.php?nyx=219062';
 export const DAILY_URL = 'https://www.marqueur.com/hockey/mbr/tools/pool/standing_01.php?nyx=219062&c=0';
@@ -19,6 +19,19 @@ export function safeSource(raw: string, base = STANDING_URL, page = 'stats_03.ph
     throw new Error('Lien de formation inattendu.');
   }
   return url.href;
+}
+// Vérifie des résultats sportifs, sans appliquer ni modifier le barème du pool.
+export function assertSelectionStats(columns: StatColumn[], stats: Record<string, number>, name: string) {
+  if (new Set(columns.map(c => c.key)).size !== columns.length || ['PJ', 'TOT', 'MOY'].some(label => columns.filter(c => c.label === label).length !== 1)) throw new Error('Colonnes de statistiques absentes ou ambiguës.');
+  if (columns.some(c => !Number.isFinite(stats[c.key]))) throw new Error(`Statistiques incomplètes pour ${name}.`);
+  const games = stats[columns.find(c => c.label === 'PJ')!.key];
+  if (!Number.isInteger(games) || games < 0) throw new Error(`Nombre de parties invalide pour ${name}.`);
+  const regularWins = columns.find(c => c.label === 'V' && /temps régulier/i.test(c.description));
+  if (regularWins) {
+    const resultColumns = [regularWins, ...columns.filter(c => ['VP', 'VF', 'DP', 'DF'].includes(c.label))];
+    const results = resultColumns.map(c => stats[c.key]);
+    if (results.some(v => !Number.isInteger(v) || v < 0) || results.reduce((sum, v) => sum + v, 0) > games) throw new Error(`Résultats incohérents pour ${name} : les victoires et défaites détaillées dépassent les parties jouées. Mise à jour reportée.`);
+  }
 }
 function heading($: CheerioAPI, element: Parameters<CheerioAPI>[0]) {
   const copy = $(element).find('.ee').first().clone();
@@ -62,6 +75,8 @@ export function parseStanding(html: string): Standing {
 }
 export function parseRoster(html: string, participant: Participant, season: string): Roster {
   const $ = load(html);
+  const selectedParameter = $('#id_parametre option[selected]').attr('value');
+  if (selectedParameter && selectedParameter !== new URL(participant.sourceUrl).searchParams.get('p')) throw new Error('La formation utilise un autre paramètre de pool.');
   const summary = tableFor($, 'SOMMAIRE');
   if (!clean(summary.find('.ee2').text()).includes(participant.name.toUpperCase()) || !summary.find('.ee2').text().includes(season)) throw new Error('La formation reçue ne correspond pas au participant ou à la saison.');
   const groups: RosterGroup[] = [];
@@ -86,6 +101,7 @@ export function parseRoster(html: string, participant: Participant, season: stri
       const entryName = clean(link.text());
       if (!entryName) throw new Error('Choix sans nom.');
       const stats = Object.fromEntries(columns.map(c => [c.key, number(cells.eq(Number(c.key)).text())]));
+      assertSelectionStats(columns, stats, entryName);
       const tip = load(link.attr('data-tip') ?? '').text();
       const status = clean(tip.match(/(Actif depuis[^]*|Réserviste[^]*|Inactif[^]*)/i)?.[0] ?? 'Statut non précisé');
       return { name: entryName, team: clean(cells.eq(0).text()), round: clean(cells.eq(1).text()).match(/\((\d+)\)\s*$/)?.[1] ?? '', status, stats, points: stats[String(totalIndex)] };
@@ -97,19 +113,23 @@ export function parseRoster(html: string, participant: Participant, season: stri
     });
     if (!entries.length || totals.length !== headers.length) throw new Error(`Formation ${name} vide ou sans total.`);
     const total = number(totals[totalIndex]);
+    const totalStats = Object.fromEntries(columns.map(c => [c.key, number(totals[Number(c.key)])]));
+    assertSelectionStats(columns, totalStats, `total ${name}`);
     // Totaux de Marqueur conservés tels quels. Vérification sans recalcul des règles du pool.
-    groups.push({ name, columns, entries, total });
+    groups.push({ name, columns, entries, total, totals: totalStats });
   });
   const groupNames = groups.map(g => g.name);
   if (!groupNames.includes('GARDIENS') || !groupNames.includes('ÉQUIPES') || !(groupNames.includes('JOUEURS') || (groupNames.includes('ATTAQUANTS') && groupNames.includes('DÉFENSEURS'))) || new Set(groupNames).size !== groups.length || (groupNames.includes('JOUEURS') && (groupNames.includes('ATTAQUANTS') || groupNames.includes('DÉFENSEURS')))) throw new Error('Catégories de formation incomplètes ou ambiguës.');
   const summaryTable = summary.find('table').first();
   const summaryHeaders = summaryTable.find('tr').first().children('td').map((_, c) => clean($(c).text())).get();
   const summaryTotalIndex = summaryHeaders.indexOf('TOT');
-  if (summaryTotalIndex < 0) throw new Error('Sommaire non reconnu.');
+  if (['TOT', 'PJ', 'MOY'].some(label => summaryHeaders.filter(h => h === label).length !== 1)) throw new Error('Sommaire non reconnu.');
   const total = number(summaryTable.find('tr.tr_tot').children('td').eq(summaryTotalIndex).text());
+  const summaryCells = summaryTable.find('tr.tr_tot').children('td');
+  if (number(summaryCells.eq(summaryHeaders.indexOf('PJ')).text()) !== participant.games || number(summaryCells.eq(summaryHeaders.indexOf('MOY')).text()) !== participant.average || groups.reduce((sum, g) => sum + g.totals![g.columns.find(c => c.label === 'PJ')!.key], 0) !== participant.games) throw new Error(`Les parties jouées ou la moyenne de ${participant.name} diffèrent du classement.`);
   if (total !== groups.reduce((n, g) => n + g.total, 0) || total !== participant.points) throw new Error(`Le total de ${participant.name} diffère du classement. Récupération à reprendre.`);
   if (groups.filter(g => ['JOUEURS', 'ATTAQUANTS', 'DÉFENSEURS'].includes(g.name)).reduce((n, g) => n + g.total, 0) !== participant.players || groups.find(g => g.name === 'GARDIENS')!.total !== participant.goalies || groups.find(g => g.name === 'ÉQUIPES')!.total !== participant.teams) throw new Error(`Les totaux par catégorie de ${participant.name} diffèrent du classement.`);
-  return { participantId: participant.id, name: participant.name, season, groups, total, sourceUrl: participant.sourceUrl };
+  return { participantId: participant.id, name: participant.name, season, groups, total, games: participant.games, average: participant.average, sourceUrl: participant.sourceUrl };
 }
 export function parseDaily(html: string, now = new Date()): Daily {
   const $ = load(html);

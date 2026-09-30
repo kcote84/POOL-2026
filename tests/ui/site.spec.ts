@@ -7,6 +7,7 @@ const standing = parseStanding(await readFile(new URL('../fixtures/standing.html
 const rosters = Object.fromEntries(await Promise.all(standing.participants.map(async p => [p.id, parseRoster(await readFile(new URL(`../fixtures/roster-${p.id}.html`, import.meta.url), 'utf8'), p, standing.season)])));
 const meta = { fetchedAt: new Date().toISOString(), stale: false, refreshing: false, error: null, source: 'marqueur', intervalMinutes: 15, nextAttemptAt: null };
 test.beforeEach(async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.route('**/api/standing', route => route.fulfill({ json: { data: standing, meta } }));
   await page.route('**/api/daily', route => route.fulfill({ json: { data: null, meta: { ...meta, fetchedAt: null, error: 'Tableau non daté.' } } }));
   await page.route('**/api/rosters/*', route => route.fulfill({ json: { data: rosters[route.request().url().split('/').pop()!], meta } }));
@@ -21,6 +22,12 @@ for (const width of [320, 390, 768, 1440]) test(`classement, formations et navig
     const row = page.getByRole('row').filter({ has: page.getByRole('link', { name: p.name, exact: true }) });
     await expect(row.locator('.points')).toHaveText(String(p.points)+'pts');
     await expect(row.locator('.gap')).toHaveText(p.gap === 0 ? '—' : String(p.gap));
+    await expect(row.locator('.ranking-games strong')).toHaveText(String(p.games));
+    await expect(row.locator('.ranking-average strong')).toHaveText(new Intl.NumberFormat('fr-CA', {minimumFractionDigits:2}).format(p.average));
+    if (width <= 700) for (const stat of ['.ranking-games', '.ranking-average']) {
+      const box = await row.locator(stat).boundingBox();
+      expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    }
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   await page.screenshot({ path: `test-results/classement-${width}.png`, fullPage: true });
