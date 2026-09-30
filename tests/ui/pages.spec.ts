@@ -53,3 +53,15 @@ test('Pages : contrastes et structure accessibles sur téléphone', async ({ pag
   await page.setViewportSize({ width: 390, height: 844 }); await page.goto('/POOL-2026/'); await expect(page.locator('.source-bar')).toBeVisible();
   expect((await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
 });
+
+for (const width of [320,390,1440]) test(`Pages : historique et barème dépliés à ${width}px`, async ({page}) => {
+  await page.setViewportSize({width,height:900});
+  const records=[{date:'2026-09-30',observedAt:meta.fetchedAt,participants:standing.participants}];
+  await page.route('**/POOL-2026/data/history.json', route=>route.fulfill({json:{data:{season:standing.season,records},meta}}));
+  await page.goto('/POOL-2026/');
+  await page.getByText('Historique du classement',{exact:true}).click();
+  await expect(page.locator('.history-table tbody tr')).toHaveCount(7);
+  await page.getByText('Comprendre les points et le barème',{exact:true}).click();
+  await expect(page.locator('.scoring-examples article')).toHaveCount(3);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(width);
+});

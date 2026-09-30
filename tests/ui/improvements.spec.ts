@@ -99,9 +99,9 @@ test('un fichier dragon absent ne bloque jamais les résultats', async ({page}) 
   await expect(page.getByRole('link',{name:`Voir la formation de ${p.name}`})).toBeVisible();
 });
 
-test('historique daté et explication des points Panthers sur téléphone', async ({page}) => {
+for (const width of [320,390,1440]) test(`historique et barème à ${width}px`, async ({page}) => {
   await page.emulateMedia({reducedMotion:'reduce'});
-  await page.setViewportSize({width:390,height:844});
+  await page.setViewportSize({width,height:844});
   const records=[
     {date:'2026-09-29',observedAt:'2026-09-29T20:00:00Z',participants:standing.participants.map(p=>({...p,points:p.points-1}))},
     {date:'2026-09-30',observedAt:'2026-09-30T20:00:00Z',participants:standing.participants},
@@ -121,7 +121,7 @@ test('historique daté et explication des points Panthers sur téléphone', asyn
   const panthers=page.locator('.scoring-examples article').filter({hasText:'Florida Panthers'});
   await expect(panthers.locator('strong')).toHaveText('2 points du pool');
   await expect(panthers.getByText('VP',{exact:true})).toBeVisible();
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(390);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(width);
   expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
-  await page.screenshot({path:'test-results/history-rules-390.png',fullPage:true});
+  await page.screenshot({path:`test-results/history-rules-${width}.png`,fullPage:true});
 });
