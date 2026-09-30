@@ -24,6 +24,7 @@ app.use('/api', (_req, res, next) => {
   void cache.refresh();
   next();
 });
+app.get('/api/history', (_req, res) => res.json(cache.response(cache.snapshot?.history ? { data: cache.snapshot.history, fetchedAt: cache.snapshot.standing.fetchedAt } : null)));
 app.get('/api/standing', (_req, res) => res.json(cache.response(cache.snapshot?.standing)));
 app.get('/api/rosters/:id', (req, res) => {
   if (!/^\d+$/.test(req.params.id)) { res.status(404).json({ error: 'Formation introuvable.' }); return; }

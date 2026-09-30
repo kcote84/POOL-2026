@@ -1,6 +1,7 @@
 import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import type { ApiResponse, Snapshot, Standing, Roster, Daily } from '../shared/types';
+import { updateHistory, validHistory } from '../shared/history';
+import type { ApiResponse, Snapshot, Standing, Roster, Daily, StandingHistory } from '../shared/types';
 import { DAILY_URL, STANDING_URL, assertSelectionStats, parseDaily, parseRoster, parseStanding, safeSource } from './parser';
 
 export interface Config { intervalMs: number; staleMs: number; timeoutMs: number; cacheFile: string }
@@ -44,6 +45,11 @@ export function validateSnapshot(value: unknown): value is Snapshot {
       if (r.groups.every(g => g.totals) && r.groups.reduce((sum, g) => sum + g.totals![g.columns.find(c => c.label === 'PJ')!.key], 0) !== p.games) return false;
     }
     if (s.daily !== null && (!stamp(s.daily.fetchedAt) || !/^\d{1,2} [A-ZÀ-Ü]+ \d{4}$/.test(s.daily.data.date) || s.daily.data.sourceUrl !== DAILY_URL || s.daily.data.participants.length !== 7 || s.daily.data.participants.some(p => !finite(p.points) || !ps.some(q => q.id === p.id)))) return false;
+    if (s.history !== undefined) {
+      if (!validHistory(s.history, s.standing)) return false;
+      const latest = s.history.records.at(-1)!;
+      if (latest.observedAt !== s.standing.fetchedAt || latest.participants.some(p => !ps.some(q => q.id === p.id && q.name === p.name && q.rank === p.rank && q.points === p.points && q.games === p.games && q.average === p.average))) return false;
+    }
     return true;
   } catch { return false; }
 }
@@ -58,6 +64,7 @@ export class PoolCache {
     try {
       const value: unknown = JSON.parse(await readFile(this.config.cacheFile, 'utf8'));
       if (!validateSnapshot(value)) throw new Error('Cache invalide.');
+      value.history ??= updateHistory(undefined, value.standing);
       this.snapshot = value;
       this.lastAttempt = Date.parse(value.standing.fetchedAt);
     } catch (error) {
@@ -88,6 +95,7 @@ export class PoolCache {
         this.dailyError = null;
       } catch (error) { this.dailyError = error instanceof Error ? error.message : 'Résultats quotidiens indisponibles.'; }
       const candidate: Snapshot = { standing: { data: standing, fetchedAt: new Date().toISOString() }, rosters, daily };
+      candidate.history = updateHistory(this.snapshot?.history, candidate.standing, this.snapshot?.standing);
       if (!validateSnapshot(candidate)) throw new Error('Les résultats récupérés ne passent pas les contrôles de cohérence.');
       await mkdir(dirname(this.config.cacheFile), { recursive: true });
       const tempFile = `${this.config.cacheFile}.tmp`;
@@ -101,7 +109,7 @@ export class PoolCache {
       console.warn(`[Marqueur] ${this.error} Dernier résultat valide conservé.`);
     }
   }
-  response<T extends Standing | Roster | Daily>(cached: { data: T; fetchedAt: string } | null | undefined, error = this.error): ApiResponse<T> {
+  response<T extends Standing | Roster | Daily | StandingHistory>(cached: { data: T; fetchedAt: string } | null | undefined, error = this.error): ApiResponse<T> {
     return { data: cached?.data ?? null, meta: {
       fetchedAt: cached?.fetchedAt ?? null,
       stale: !cached || Date.now() - Date.parse(cached.fetchedAt) > this.config.staleMs,

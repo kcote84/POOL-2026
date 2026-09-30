@@ -113,3 +113,13 @@ npm start
 Le serveur sert alors l’interface compilée et l’API sur le même port. Prévoir un domaine, HTTPS via l’hébergeur/proxy, un processus Node permanent et un volume persistant pour `CACHE_FILE`. Tester les pages Marqueur depuis l’hébergeur choisi avant publication ; certains réseaux peuvent être refusés. Si une protection bloque la récupération, ne pas la contourner : conserver le cache ou afficher l’indisponibilité.
 
 Ce mode partage son cache au sein d’**un seul processus serveur**. Pour plusieurs instances, prévoir un cache central et une tâche de synchronisation unique avant de les multiplier.
+
+## Historique et explication du pointage
+
+« Historique du classement » conserve le dernier relevé validé de chaque journée à Montréal, avec les rangs, points et variations entre relevés. Le suivi commence au premier instantané disponible : aucune journée passée n’est inventée. Il garde jusqu’à 400 journées de la même saison et repart à la saison suivante. Une variation négative peut représenter une correction de Marqueur.
+
+L’historique fait partie du même instantané atomique que les formations. Il persiste dans `.cache/marqueur.json`, est exporté vers `public/data/history.json` et peut être restauré depuis l’instantané publié si le cache du runner a été évincé. Les anciens instantanés sont migrés à partir de leur date réelle de récupération. Une panne ne remplace ni les scores ni l’historique validés.
+
+« Comprendre les points et le barème » explique TOT, PJ, MOY, les types de victoires et les bonus. Ses exemples affichent les statistiques et points des formations récupérées, avec un lien vers chaque source. Les coefficients non accessibles publiquement ne sont pas inventés ; les paramètres officiels restent administrés sur Marqueur.
+
+Le workflow vérifie aussi les parcours Playwright et l’accessibilité sur un push ou une publication manuelle. Les cycles planifiés conservent les contrôles de données et la compilation, sans réinstaller Chromium à chaque récupération.

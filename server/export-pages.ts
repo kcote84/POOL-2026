@@ -22,6 +22,7 @@ export async function exportPages(cache: PoolCache, outputDir: string, seedUrl?:
   await mkdir(outputDir, { recursive: true });
   const snapshot = cache.snapshot;
   const files: Record<string, unknown> = {
+    'history.json': cache.response(snapshot?.history ? { data: snapshot.history, fetchedAt: snapshot.standing.fetchedAt } : null),
     'standing.json': cache.response(snapshot?.standing),
     'daily.json': cache.response(snapshot?.daily, cache.dailyError ?? cache.error ?? (snapshot?.daily ? null : 'La date du tableau quotidien de Marqueur ne peut pas être confirmée.')),
     'snapshot.json': snapshot,

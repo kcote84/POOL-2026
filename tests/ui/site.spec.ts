@@ -7,6 +7,7 @@ const standing = parseStanding(await readFile(new URL('../fixtures/standing.html
 const rosters = Object.fromEntries(await Promise.all(standing.participants.map(async p => [p.id, parseRoster(await readFile(new URL(`../fixtures/roster-${p.id}.html`, import.meta.url), 'utf8'), p, standing.season)])));
 const meta = { fetchedAt: new Date().toISOString(), stale: false, refreshing: false, error: null, source: 'marqueur', intervalMinutes: 15, nextAttemptAt: null };
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/history', route => route.fulfill({ json: { data: { season: standing.season, records: [] }, meta } }));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.route('**/api/standing', route => route.fulfill({ json: { data: standing, meta } }));
   await page.route('**/api/daily', route => route.fulfill({ json: { data: null, meta: { ...meta, fetchedAt: null, error: 'Tableau non daté.' } } }));

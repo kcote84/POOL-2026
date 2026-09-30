@@ -10,6 +10,9 @@ export interface RosterGroup { name: string; columns: StatColumn[]; entries: Sel
 export interface Roster { participantId: string; name: string; season: string; groups: RosterGroup[]; total: number; games?: number; average?: number; sourceUrl: string }
 export interface Daily { date: string; participants: Participant[]; sourceUrl: string }
 export interface Cached<T> { data: T; fetchedAt: string }
-export interface Snapshot { standing: Cached<Standing>; rosters: Record<string, Cached<Roster>>; daily: Cached<Daily> | null }
+export interface HistoryParticipant { id: string; name: string; rank: number; points: number; games: number; average: number }
+export interface HistoryRecord { date: string; observedAt: string; participants: HistoryParticipant[] }
+export interface StandingHistory { season: string; records: HistoryRecord[] }
+export interface Snapshot { history?: StandingHistory; standing: Cached<Standing>; rosters: Record<string, Cached<Roster>>; daily: Cached<Daily> | null }
 export interface SyncMeta { fetchedAt: string | null; stale: boolean; refreshing: boolean; error: string | null; intervalMinutes: number; staleAfterMinutes?: number; source: 'marqueur'; nextAttemptAt: string | null }
 export interface ApiResponse<T> { data: T | null; meta: SyncMeta }

@@ -8,6 +8,7 @@ const rosters = Object.fromEntries(await Promise.all(standing.participants.map(a
 const meta = { fetchedAt: new Date().toISOString(), stale: false, refreshing: false, error: null, source: 'marqueur', intervalMinutes: 15, staleAfterMinutes: 45, nextAttemptAt: null };
 test.use({ baseURL: 'http://localhost:4173' });
 test.beforeEach(async ({ page }) => {
+  await page.route('**/POOL-2026/data/history.json', route => route.fulfill({ json: { data: { season: standing.season, records: [] }, meta } }));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.route('**/POOL-2026/data/standing.json', r => r.fulfill({ json: { data: standing, meta } }));
   await page.route('**/POOL-2026/data/daily.json', r => r.fulfill({ json: { data: null, meta: { ...meta, fetchedAt: null, error: 'Non daté.' } } }));

@@ -7,6 +7,7 @@ const p = standing.participants.find(p => p.name === 'Sir Jorah')!;
 const roster = parseRoster(await readFile(new URL(`../fixtures/roster-${p.id}.html`, import.meta.url), 'utf8'), p, standing.season);
 const meta = { fetchedAt: new Date().toISOString(), stale: false, refreshing: false, error: null, source: 'marqueur', intervalMinutes: 15, nextAttemptAt: null };
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/history', route => route.fulfill({ json: { data: { season: standing.season, records: [] }, meta } }));
   await page.route('**/api/standing', r => r.fulfill({json:{data:standing,meta}}));
   await page.route('**/api/daily', r => r.fulfill({json:{data:null,meta}}));
   await page.route('**/api/rosters/*', r => r.fulfill({json:{data:roster,meta}}));
@@ -96,4 +97,31 @@ test('un fichier dragon absent ne bloque jamais les résultats', async ({page}) 
   await expect(page.getByRole('table')).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('link',{name:`Voir la formation de ${p.name}`})).toBeVisible();
+});
+
+test('historique daté et explication des points Panthers sur téléphone', async ({page}) => {
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.setViewportSize({width:390,height:844});
+  const records=[
+    {date:'2026-09-29',observedAt:'2026-09-29T20:00:00Z',participants:standing.participants.map(p=>({...p,points:p.points-1}))},
+    {date:'2026-09-30',observedAt:'2026-09-30T20:00:00Z',participants:standing.participants},
+  ];
+  await page.route('**/api/history', r=>r.fulfill({json:{data:{season:standing.season,records},meta}}));
+  await page.goto('/');
+  await page.getByText('Historique du classement',{exact:true}).click();
+  await expect(page.getByLabel('Journée du relevé')).toHaveValue('2026-09-30');
+  const history=page.locator('.history-card');
+  const row=history.getByRole('row').filter({hasText:'Sir Jorah'});
+  await expect(row.locator('td').nth(1)).toHaveText('10');
+  await expect(row.locator('td').nth(2)).toHaveText('+1');
+  await page.getByLabel('Journée du relevé').selectOption('2026-09-29');
+  await expect(row.locator('td').nth(1)).toHaveText('9');
+  await expect(row.locator('td').nth(2)).toHaveText('—');
+  await page.getByText('Comprendre les points et le barème',{exact:true}).click();
+  const panthers=page.locator('.scoring-examples article').filter({hasText:'Florida Panthers'});
+  await expect(panthers.locator('strong')).toHaveText('2 points du pool');
+  await expect(panthers.getByText('VP',{exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(390);
+  expect((await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
+  await page.screenshot({path:'test-results/history-rules-390.png',fullPage:true});
 });

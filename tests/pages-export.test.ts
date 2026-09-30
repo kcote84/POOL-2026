@@ -29,6 +29,7 @@ test('export Pages : sept formations réelles, points et horodatages identiques 
     const roster = JSON.parse(await readFile(join(output, `roster-${p.id}.json`), 'utf8'));
     assert.equal(roster.data.total, p.points); assert.equal(roster.data.name, p.name);
   }
+  assert.deepEqual(JSON.parse(await readFile(join(output, 'history.json'), 'utf8')).data, cache.snapshot!.history);
   assert.deepEqual(JSON.parse(await readFile(join(output, 'snapshot.json'), 'utf8')), cache.snapshot);
   assert.equal(JSON.parse(await readFile(join(output, 'daily.json'), 'utf8')).data, null);
 });

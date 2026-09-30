@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode, type MouseEvent } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronRight, Clock3, Crown, ExternalLink, Flag, LoaderCircle, RefreshCw, Shield, Star, Swords, Trophy, WifiOff } from 'lucide-react';
-import type { ApiResponse, Daily, Participant, Roster, Standing, SyncMeta } from '../shared/types';
+import type { Daily, Participant, Roster, Standing, SyncMeta } from '../shared/types';
 import { houses } from './Crest';
 import { Portrait } from './Portrait';
 import { profiles } from './participants';
 import { DragonIntro } from './DragonIntro';
-import { apiHref, baseUrl, currentMeta, currentPath, pageHref, staticPages } from './platform';
+import { PoolInformation } from './PoolInformation';
+import { useApi } from './useApi';
+import { baseUrl, currentPath, pageHref, staticPages } from './platform';
 
 const format = new Intl.NumberFormat('fr-CA', { maximumFractionDigits: 2 });
 const averageFormat = new Intl.NumberFormat('fr-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -16,34 +18,6 @@ function Link({ to, children, className, ...props }: { to: string; children: Rea
     e.preventDefault(); window.history.pushState({}, '', pageHref(to)); window.dispatchEvent(new PopStateEvent('popstate')); window.scrollTo({ top: 0, behavior: 'instant' });
   };
   return <a href={pageHref(to)} onClick={click} className={className} {...props}>{children}</a>;
-}
-function useApi<T>(endpoint: string) {
-  const [response, setResponse] = useState<ApiResponse<T> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [networkError, setNetworkError] = useState<string | null>(null);
-  const [reload, setReload] = useState(0);
-  useEffect(() => { setResponse(null); setLoading(true); setNetworkError(null); }, [endpoint]);
-  useEffect(() => {
-    let stopped = false;
-    let timer: ReturnType<typeof setTimeout>;
-    const controller = new AbortController();
-    async function get() {
-      try {
-        const res = await fetch(apiHref(endpoint), { cache: 'no-cache', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]) });
-        if (!res.ok) throw new Error(res.status === 404 ? 'Cette formation est introuvable.' : 'Le serveur du royaume est indisponible.');
-        const json = await res.json() as ApiResponse<T>;
-        if (!json.meta) throw new Error('Réponse du serveur non reconnue.');
-        json.meta = currentMeta(json.meta);
-        if (!stopped) { setResponse(json); setNetworkError(null); }
-        if (!stopped) timer = setTimeout(get, json.meta.refreshing ? 2000 : 60_000);
-      } catch (error) {
-        if (!stopped) { setNetworkError(error instanceof Error ? error.message : 'Connexion impossible.'); timer = setTimeout(get, 30_000); }
-      } finally { if (!stopped) setLoading(false); }
-    }
-    void get();
-    return () => { stopped = true; clearTimeout(timer); controller.abort(); };
-  }, [endpoint, reload]);
-  return { response, loading, networkError, retry: () => setReload(v => v + 1) };
 }
 function Status({ meta, networkError }: { meta: SyncMeta; networkError?: string | null }) {
   const warning = meta.stale || meta.error || networkError;
@@ -128,7 +102,7 @@ function DailyCard({ full = false }: { full?: boolean }) {
   </section>;
 }
 function Home({ standing }: { standing: Standing }) {
-  return <><Hero season={standing.season}/><FavoriteHouse standing={standing}/><div className="dashboard"><Rankings standing={standing}/><aside><Leader participants={standing.participants}/><DailyCard/><div className="quote"><span>“</span><p>Une couronne se gagne<br/>un point à la fois.</p><small>LA DEVISE DU CONSEIL</small></div></aside></div></>;
+  return <><Hero season={standing.season}/><FavoriteHouse standing={standing}/><div className="dashboard"><Rankings standing={standing}/><aside><Leader participants={standing.participants}/><DailyCard/><div className="quote"><span>“</span><p>Une couronne se gagne<br/>un point à la fois.</p><small>LA DEVISE DU CONSEIL</small></div></aside></div><PoolInformation standing={standing}/></>;
 }
 function Formations({ standing }: { standing: Standing }) {
   return <><div className="page-intro"><div className="eyebrow">LES SEPT MAISONS</div><h1>Les armées du royaume</h1><p>Chaque sélection compte. Explorez les joueurs, les gardiens et les équipes de chaque prétendant.</p></div><div className="houses-grid">{standing.participants.map(p => <Link to={`/formation/${p.id}`} key={p.id} className="house-card"><span className="house-rank">RANG {String(p.rank).padStart(2, '0')}</span><Portrait name={p.name} large/><h2>{p.name}</h2><p className="real-name">{profiles[p.name]?.realName}</p><p className="participant-motto">{houses[p.name]?.motto}</p><div><strong>{format.format(p.points)} <small>pts</small></strong><span>Voir la formation <ArrowRight size={15}/></span></div></Link>)}</div></>;
