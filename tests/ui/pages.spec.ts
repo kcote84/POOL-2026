@@ -22,6 +22,11 @@ for (const width of [320, 390, 1440]) test(`site compilé Pages sous /POOL-2026/
   await page.goto('/POOL-2026/');
   await expect(page.getByRole('heading', { name: 'La course au Trône de fer' })).toBeVisible();
   await expect(page.getByRole('table').getByRole('row')).toHaveCount(8);
+  const steve = page.getByRole('row').filter({ has: page.getByRole('link', { name: 'Ned Stark', exact: true }) });
+  await expect(steve.locator('.real-name')).toHaveText('Steve');
+  await expect(steve.getByRole('img', { name: 'Portrait de Arya Stark' })).toBeVisible();
+  await expect(steve.getByRole('img', { name: 'Portrait de Arya Stark' })).toHaveJSProperty('complete', true);
+  expect(await steve.getByRole('img', { name: 'Portrait de Arya Stark' }).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
   expect(await page.locator('.hero-art').evaluate(el => getComputedStyle(el).backgroundImage)).toContain('/POOL-2026/fortress.svg');
   await page.getByRole('link', { name: 'Voir la formation de Greyworm' }).click();

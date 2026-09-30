@@ -24,10 +24,12 @@ npm run dev
 ## Ce qui fonctionne avec Marqueur
 
 - Classement cumulatif des sept participants, points du pool, ordre et écart fourni par Marqueur ; meneur et éventuelles égalités mis en valeur.
-- Liens des formations extraits du classement, jamais inventés. Orthographe des pseudonymes conservée depuis le titre des liens Marqueur, sans affichage des noms civils.
+- Liens des formations extraits du classement, jamais inventés. Orthographe des pseudonymes conservée depuis le titre des liens Marqueur. Les prénoms et noms abrégés fournis par les participants apparaissent sous les personnages.
 - Sept formations de 24 sélections à la validation initiale : joueurs, gardiens et équipes. Statistiques disponibles, choix de repêchage et statut lorsqu’il est indiqué.
 - Points de chaque sélection extraits de la colonne **TOT** ; totaux de chaque catégorie et sommaire conservés. Aucun calcul à partir des simples points de la LNH. Les points du pool sont la première colonne numérique sur téléphone.
-- Navigation clavier, onglets avec flèches, lien d’évitement, prise en compte des mouvements réduits, polices locales et ornements SVG originaux. Aucune image officielle de la série.
+- Navigation clavier, onglets avec flèches, lien d’évitement, prise en compte des mouvements réduits, polices locales et ornements SVG originaux. Portraits des personnages en avatars circulaires, avec un petit blason ; sources dans `public/avatars/SOURCES.md`.
+
+Personnages et participants : Sir Jorah → Martin C., Podrick Payne → Martin L, Lord Baelish → Jean-Pascal, Ned Stark → Steve, Sandor Cleagan → Alexandre, Greyworm → Kev, Bronn → Gabriel. À la demande du groupe, **Ned Stark garde son nom mais utilise le portrait d’Arya Stark**. Cette présentation est définie dans `src/participants.ts` et ne modifie pas les données Marqueur.
 
 Les pages publiques ont été testées par HTTP depuis Node sans cookies ni connexion le **30 septembre 2026**. Aucune API officielle n’est utilisée. Leur disponibilité et leur format peuvent évoluer.
 

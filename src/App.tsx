@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode, type MouseEvent } from 'react';
 import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronRight, Clock3, Crown, ExternalLink, Flag, LoaderCircle, RefreshCw, Shield, Swords, Trophy, WifiOff } from 'lucide-react';
 import type { ApiResponse, Daily, Participant, Roster, Standing, SyncMeta } from '../shared/types';
-import { Crest, houses } from './Crest';
+import { houses } from './Crest';
+import { Portrait } from './Portrait';
+import { profiles } from './participants';
 import { apiHref, baseUrl, currentMeta, currentPath, pageHref, staticPages } from './platform';
 
 const format = new Intl.NumberFormat('fr-CA', { maximumFractionDigits: 2 });
@@ -87,7 +89,7 @@ function Leader({ participants }: { participants: Participant[] }) {
   const tied = participants.filter(p => p.points === leader.points);
   return <section className="leader-card">
     <div className="leader-top"><Crown size={17}/><span>{tied.length > 1 ? 'AU SOMMET, À ÉGALITÉ' : 'SUR LE TRÔNE'}</span><span className="tiny-ornament">✧</span></div>
-    <div className="leader-identity"><div className="leader-crest"><Crest name={leader.name} large/></div><div><span className="label">MENEUR DU ROYAUME</span><h2>{leader.name}</h2><p>{houses[leader.name]?.motto}</p></div></div>
+    <div className="leader-identity"><div className="leader-crest"><Portrait name={leader.name} large/></div><div><span className="label">MENEUR DU ROYAUME</span><h2>{leader.name}</h2><p className="real-name">{profiles[leader.name]?.realName}</p><p className="participant-motto">{houses[leader.name]?.motto}</p></div></div>
     {tied.length > 1 && <p className="tie-note">À égalité avec {tied.slice(1).map(p => p.name).join(', ')}</p>}
     <div className="leader-numbers"><div><strong>{format.format(leader.points)}</strong><span>POINTS DU POOL</span></div><i/><div><strong>{format.format(leader.points - participants[1].points)}<small> pts</small></strong><span>D’AVANCE SUR LE 2ᵉ</span></div></div>
     <Link to={`/formation/${leader.id}`} className="leader-link">Explorer sa formation <ArrowRight size={16}/></Link>
@@ -99,7 +101,7 @@ function Rankings({ standing }: { standing: Standing }) {
       <div className="ranking-head ranking-grid" role="row"><span role="columnheader">RANG</span><span role="columnheader">PRÉTENDANT</span><span role="columnheader">POINTS</span><span role="columnheader">ÉCART</span><span className="formation-head" role="columnheader">FORMATION</span></div>
       {standing.participants.map(p => <div className={`ranking-row ranking-grid ${p.rank === 1 ? 'first' : ''}`} key={p.id} role="row">
         <span className={`rank rank-${p.rank}`} role="cell">{String(p.rank).padStart(2, '0')}{p.rank === 1 && <Crown size={12}/>}</span>
-        <span className="rank-identity" role="cell"><Crest name={p.name}/><span><Link to={`/formation/${p.id}`} className="participant-name">{p.name}</Link><small>{houses[p.name]?.motto}</small></span></span>
+        <span className="rank-identity" role="cell"><Portrait name={p.name}/><span><Link to={`/formation/${p.id}`} className="participant-name">{p.name}</Link><small className="real-name">{profiles[p.name]?.realName}</small></span></span>
         <strong className="points" role="cell">{format.format(p.points)}<small>pts</small></strong>
         <span className={`gap ${p.gap === 0 ? 'zero' : ''}`} role="cell">{p.gap === 0 ? '—' : <><ArrowDown size={11}/>{format.format(p.gap)}</>}</span>
         <span role="cell"><Link to={`/formation/${p.id}`} className="formation-link" aria-label={`Voir la formation de ${p.name}`}><span>Voir</span><ChevronRight size={17}/></Link></span>
@@ -111,7 +113,7 @@ function DailyCard({ full = false }: { full?: boolean }) {
   const api = useApi<Daily>('/api/daily');
   const daily = api.response?.data;
   return <section className={`daily-card ${full ? 'daily-full' : ''}`}><div className="daily-heading"><Swords size={21}/><h2>Les batailles du jour</h2></div>
-    {daily ? <><p className="daily-date">{daily.date}</p><div className="daily-results">{daily.participants.map(p => <div key={p.id}><Link to={`/formation/${p.id}`}>{p.name}</Link><strong>{format.format(p.points)} <small>pts</small></strong></div>)}</div>{api.response && <Status meta={api.response.meta}/>}</> : <><div className="daily-symbol"><Swords size={34}/><span>✦</span></div><span className="label">EN ATTENTE DE NOUVELLES FIABLES</span><p>Le tableau quotidien de Marqueur ne précise pas la journée concernée.</p><p className="muted">Les résultats s’afficheront ici lorsque leur date pourra être confirmée.</p>{api.networkError && <p className="warning-text">{api.networkError}</p>}</>}
+    {daily ? <><p className="daily-date">{daily.date}</p><div className="daily-results">{daily.participants.map(p => <div key={p.id}><Link to={`/formation/${p.id}`} className="daily-participant"><Portrait name={p.name}/><span>{p.name}<small className="real-name">{profiles[p.name]?.realName}</small></span></Link><strong>{format.format(p.points)} <small>pts</small></strong></div>)}</div>{api.response && <Status meta={api.response.meta}/>}</> : <><div className="daily-symbol"><Swords size={34}/><span>✦</span></div><span className="label">EN ATTENTE DE NOUVELLES FIABLES</span><p>Le tableau quotidien de Marqueur ne précise pas la journée concernée.</p><p className="muted">Les résultats s’afficheront ici lorsque leur date pourra être confirmée.</p>{api.networkError && <p className="warning-text">{api.networkError}</p>}</>}
     <a className="text-link" href="https://www.marqueur.com/hockey/mbr/tools/pool/standing_01.php?nyx=219062&c=0" target="_blank" rel="noreferrer">Consulter Marqueur <ExternalLink size={13}/></a>
   </section>;
 }
@@ -119,7 +121,7 @@ function Home({ standing }: { standing: Standing }) {
   return <><Hero season={standing.season}/><div className="dashboard"><Rankings standing={standing}/><aside><Leader participants={standing.participants}/><DailyCard/><div className="quote"><span>“</span><p>Une couronne se gagne<br/>un point à la fois.</p><small>LA DEVISE DU CONSEIL</small></div></aside></div></>;
 }
 function Formations({ standing }: { standing: Standing }) {
-  return <><div className="page-intro"><div className="eyebrow">LES SEPT MAISONS</div><h1>Les armées du royaume</h1><p>Chaque sélection compte. Explorez les joueurs, les gardiens et les équipes de chaque prétendant.</p></div><div className="houses-grid">{standing.participants.map(p => <Link to={`/formation/${p.id}`} key={p.id} className="house-card"><span className="house-rank">RANG {String(p.rank).padStart(2, '0')}</span><Crest name={p.name} large/><h2>{p.name}</h2><p>{houses[p.name]?.motto}</p><div><strong>{format.format(p.points)} <small>pts</small></strong><span>Voir la formation <ArrowRight size={15}/></span></div></Link>)}</div></>;
+  return <><div className="page-intro"><div className="eyebrow">LES SEPT MAISONS</div><h1>Les armées du royaume</h1><p>Chaque sélection compte. Explorez les joueurs, les gardiens et les équipes de chaque prétendant.</p></div><div className="houses-grid">{standing.participants.map(p => <Link to={`/formation/${p.id}`} key={p.id} className="house-card"><span className="house-rank">RANG {String(p.rank).padStart(2, '0')}</span><Portrait name={p.name} large/><h2>{p.name}</h2><p className="real-name">{profiles[p.name]?.realName}</p><p className="participant-motto">{houses[p.name]?.motto}</p><div><strong>{format.format(p.points)} <small>pts</small></strong><span>Voir la formation <ArrowRight size={15}/></span></div></Link>)}</div></>;
 }
 function Formation({ id, standing }: { id: string; standing: Standing }) {
   const api = useApi<Roster>(`/api/rosters/${encodeURIComponent(id)}`);
@@ -134,7 +136,7 @@ function Formation({ id, standing }: { id: string; standing: Standing }) {
   const shownColumns = [...group.columns.filter(c => c.label === 'TOT'), ...group.columns.filter(c => c.label !== 'TOT')];
   const entries = sort === 'points' ? [...group.entries].sort((a, b) => b.points - a.points) : group.entries;
   return <><Link to="/" className="back-link"><ArrowLeft size={15}/>Retour au classement</Link>
-    <section className="roster-hero"><Crest name={roster.name} large/><div><div className="eyebrow">LA FORMATION · RANG {participant.rank}</div><h1>{roster.name}</h1><p>{houses[roster.name]?.motto}</p></div><div className="roster-total"><strong>{format.format(roster.total)}</strong><span>POINTS DU POOL</span></div></section>
+    <section className="roster-hero"><Portrait name={roster.name} large/><div><div className="eyebrow">LA FORMATION · RANG {participant.rank}</div><h1>{roster.name}</h1><p className="real-name">{profiles[roster.name]?.realName}</p><p className="participant-motto">{houses[roster.name]?.motto}</p></div><div className="roster-total"><strong>{format.format(roster.total)}</strong><span>POINTS DU POOL</span></div></section>
     {api.response && <Status meta={api.response.meta} networkError={api.networkError}/>}
     <div className="roster-toolbar"><div className="tabs" role="tablist" aria-label="Catégories de la formation">{roster.groups.map((g, i) => <button key={g.name} id={`tab-${i}`} role="tab" aria-selected={activeGroup === i} aria-controls="roster-panel" tabIndex={activeGroup === i ? 0 : -1} onKeyDown={e => { if (['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) { e.preventDefault(); const next = e.key === 'Home' ? 0 : e.key === 'End' ? roster.groups.length - 1 : (activeGroup + (e.key === 'ArrowRight' ? 1 : -1) + roster.groups.length) % roster.groups.length; setActiveGroup(next); document.getElementById(`tab-${next}`)?.focus(); } }} onClick={() => setActiveGroup(i)}>{g.name.toLocaleLowerCase('fr')}<span>{g.entries.length}</span></button>)}</div>
       <label className="sort-label">Trier par <select value={sort} onChange={e => setSort(e.target.value as 'source' | 'points')}><option value="source">Ordre de Marqueur</option><option value="points">Points du pool</option></select></label></div>
