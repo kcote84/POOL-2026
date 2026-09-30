@@ -66,7 +66,29 @@ npm run build
 
 Les tests couvrent l’extraction des tableaux réels capturés, les sept totaux, les points spécifiques des gardiens, les liens inattendus, les dates quotidiennes, les pannes et délais HTTP, la conservation/relecture du cache, les appels concurrents, les états indisponibles et anciens, la navigation et l’absence de débordement à 320, 390, 768 et 1440 pixels. Les contrôles d’accessibilité automatisés complètent les captures vérifiées visuellement. Les captures de tests sont enregistrées dans `test-results` du dossier local.
 
-## Mise en ligne ultérieure
+## Publication sur GitHub Pages
+
+Adresse : **https://kcote84.github.io/POOL-2026/**.
+
+La configuration Pages doit utiliser **GitHub Actions**, et non publier les sources de `main` directement. Le workflow `.github/workflows/pages.yml` installe les dépendances, vérifie les extracteurs, récupère les résultats dans Node côté serveur, compile Vite avec le préfixe `/POOL-2026/`, puis publie uniquement `dist`.
+
+Les formations utilisent des liens tels que `/POOL-2026/#/formation/1252751` : l’actualisation d’une page de formation fonctionne sans règle de réécriture côté hébergeur. Les polices, ornements et fichiers JSON utilisent tous le préfixe du dépôt. Aucun navigateur ne contacte directement Marqueur.
+
+La récupération est planifiée à environ **15 minutes**. GitHub peut retarder les tâches ; l’horodatage affiché reste celui de la récupération réellement réussie. La date est recalculée côté navigateur pour signaler un instantané ancien même si les tâches ne tournent plus. Vérifier l’onglet **Actions → Publier le royaume** pour les journaux et pour lancer manuellement un cycle. GitHub peut désactiver les tâches planifiées d’un dépôt public après une longue période d’inactivité ; les réactiver dans Actions si nécessaire.
+
+Le dernier cache valide est conservé entre les tâches. Si le cache du runner a disparu, le workflow tente aussi de restaurer l’instantané déjà publié. Un échec Marqueur conserve les sept formations et leur date ; sans résultat valide, le site affiche explicitement l’indisponibilité. Les fichiers dans `public/data` sont générés à la publication et exclus des sources Git.
+
+Pour compiler ce mode localement :
+
+```sh
+npm run sync:pages
+npm run build:pages
+npx vite preview --mode pages
+```
+
+Ouvrir `http://localhost:4173/POOL-2026/`. Ces commandes utilisent le cache réel ; les fixtures restent réservées aux tests.
+
+## Autre hébergement avec un serveur Node
 
 Sur un hébergeur avec **Node.js 22.12+**, installer aussi les dépendances de développement (TypeScript et `tsx` sont utilisés), puis :
 
@@ -78,4 +100,4 @@ npm start
 
 Le serveur sert alors l’interface compilée et l’API sur le même port. Prévoir un domaine, HTTPS via l’hébergeur/proxy, un processus Node permanent et un volume persistant pour `CACHE_FILE`. Tester les pages Marqueur depuis l’hébergeur choisi avant publication ; certains réseaux peuvent être refusés. Si une protection bloque la récupération, ne pas la contourner : conserver le cache ou afficher l’indisponibilité.
 
-Cette version partage son cache au sein d’**un seul processus serveur**. Pour plusieurs instances, prévoir un cache central et une tâche de synchronisation unique avant de les multiplier. Aucun déploiement public n’a été effectué.
+Ce mode partage son cache au sein d’**un seul processus serveur**. Pour plusieurs instances, prévoir un cache central et une tâche de synchronisation unique avant de les multiplier.

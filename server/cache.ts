@@ -96,6 +96,7 @@ export class PoolCache {
       fetchedAt: cached?.fetchedAt ?? null,
       stale: !cached || Date.now() - Date.parse(cached.fetchedAt) > this.config.staleMs,
       refreshing: this.refreshing, error, intervalMinutes: this.config.intervalMs / 60_000,
+      staleAfterMinutes: this.config.staleMs / 60_000,
       source: 'marqueur', nextAttemptAt: this.lastAttempt ? new Date(this.lastAttempt + this.config.intervalMs).toISOString() : null,
     } };
   }

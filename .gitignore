@@ -9,3 +9,4 @@ playwright-report/
 *.log
 .idea/
 __pycache__/
+public/data/

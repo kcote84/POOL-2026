@@ -1,0 +1,62 @@
+name: Publier le royaume
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # UTC ; GitHub peut retarder les exécutions planifiées.
+    - cron: '7,22,37,52 * * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Vérifier les extracteurs et le cache
+        run: npm test
+      - name: Restaurer le dernier résultat valide
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache/marqueur.json
+          key: marqueur-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: marqueur-v1-
+      - name: Récupérer Marqueur côté serveur
+        run: npm run sync:pages
+        env:
+          PAGES_SEED_URL: https://kcote84.github.io/POOL-2026/data/snapshot.json
+          SYNC_INTERVAL_MINUTES: '15'
+          STALE_AFTER_MINUTES: '45'
+      - name: Conserver le résultat pour le prochain cycle
+        if: ${{ hashFiles('.cache/marqueur.json') != '' }}
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/marqueur.json
+          key: marqueur-v1-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Compiler pour /POOL-2026/
+        run: npm run build:pages
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Publier GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

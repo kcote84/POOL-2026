@@ -2,15 +2,16 @@ import { useEffect, useRef, useState, type ReactNode, type MouseEvent } from 're
 import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronRight, Clock3, Crown, ExternalLink, Flag, LoaderCircle, RefreshCw, Shield, Swords, Trophy, WifiOff } from 'lucide-react';
 import type { ApiResponse, Daily, Participant, Roster, Standing, SyncMeta } from '../shared/types';
 import { Crest, houses } from './Crest';
+import { apiHref, baseUrl, currentMeta, currentPath, pageHref, staticPages } from './platform';
 
 const format = new Intl.NumberFormat('fr-CA', { maximumFractionDigits: 2 });
 const dateTime = (s: string) => new Intl.DateTimeFormat('fr-CA', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Toronto' }).format(new Date(s));
 function Link({ to, children, className, ...props }: { to: string; children: ReactNode; className?: string; 'aria-label'?: string }) {
   const click = (e: MouseEvent<HTMLAnchorElement>) => {
     if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-    e.preventDefault(); window.history.pushState({}, '', to); window.dispatchEvent(new PopStateEvent('popstate')); window.scrollTo({ top: 0, behavior: 'instant' });
+    e.preventDefault(); window.history.pushState({}, '', pageHref(to)); window.dispatchEvent(new PopStateEvent('popstate')); window.scrollTo({ top: 0, behavior: 'instant' });
   };
-  return <a href={to} onClick={click} className={className} {...props}>{children}</a>;
+  return <a href={pageHref(to)} onClick={click} className={className} {...props}>{children}</a>;
 }
 function useApi<T>(endpoint: string) {
   const [response, setResponse] = useState<ApiResponse<T> | null>(null);
@@ -24,10 +25,11 @@ function useApi<T>(endpoint: string) {
     const controller = new AbortController();
     async function get() {
       try {
-        const res = await fetch(endpoint, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]) });
+        const res = await fetch(apiHref(endpoint), { cache: 'no-cache', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10_000)]) });
         if (!res.ok) throw new Error(res.status === 404 ? 'Cette formation est introuvable.' : 'Le serveur du royaume est indisponible.');
         const json = await res.json() as ApiResponse<T>;
         if (!json.meta) throw new Error('Réponse du serveur non reconnue.');
+        json.meta = currentMeta(json.meta);
         if (!stopped) { setResponse(json); setNetworkError(null); }
         if (!stopped) timer = setTimeout(get, json.meta.refreshing ? 2000 : 60_000);
       } catch (error) {
@@ -69,7 +71,7 @@ function Header({ path, season }: { path: string; season?: string }) {
 }
 function Hero({ season }: { season: string }) {
   return <section className="hero">
-    <div className="hero-art" aria-hidden="true"/>
+    <div className="hero-art" aria-hidden="true" style={{ backgroundImage: `url('${baseUrl}fortress.svg')` }}/>
     <div className="hero-content"><div className="eyebrow"><span/>SEPT PRÉTENDANTS. UN SEUL TRÔNE.</div>
       <h1>La course au<br/><em>Trône de fer</em></h1>
       <p>Les alliances s’effacent. Les points restent.<br/>Suivez la conquête de notre royaume de hockey.</p>
@@ -145,21 +147,21 @@ function Formation({ id, standing }: { id: string; standing: Standing }) {
   </>;
 }
 export function App() {
-  const [path, setPath] = useState(window.location.pathname);
+  const [path, setPath] = useState(currentPath());
   const previousPath = useRef(path);
   const api = useApi<Standing>('/api/standing');
   const [checked, setChecked] = useState(false);
-  useEffect(() => { const handler = () => setPath(window.location.pathname); window.addEventListener('popstate', handler); return () => window.removeEventListener('popstate', handler); }, []);
+  useEffect(() => { const handler = () => setPath(currentPath()); window.addEventListener('popstate', handler); window.addEventListener('hashchange', handler); return () => { window.removeEventListener('popstate', handler); window.removeEventListener('hashchange', handler); }; }, []);
   useEffect(() => { const title = path.startsWith('/formation/') ? api.response?.data?.participants.find(p => path.endsWith(`/${p.id}`))?.name : path === '/formations' ? 'Les formations' : path === '/batailles' ? 'Les batailles du jour' : 'La course au Trône de fer'; document.title = `${title ?? 'La formation'} · Keven2026`; if (previousPath.current !== path) document.getElementById('main-content')?.focus({ preventScroll: true }); previousPath.current = path; }, [path, api.response?.data?.season]);
   const standing = api.response?.data;
   const rosterMatch = path.match(/^\/formation\/(\d+)\/?$/);
-  return <><a className="skip-link" href="#main-content">Aller au contenu</a><Header path={path} season={standing?.season}/><main id="main-content" tabIndex={-1}>
-    {standing && path === '/' && <div className="overview-bar"><span>LE CHRONIQUEUR DU ROYAUME</span><span><Clock3 size={13}/> Actualisation toutes les {api.response!.meta.intervalMinutes} min</span></div>}
+  return <><a className="skip-link" href="#main-content" onClick={e => { e.preventDefault(); const main = document.getElementById('main-content'); main?.focus(); main?.scrollIntoView({ block: 'start' }); }}>Aller au contenu</a><Header path={path} season={standing?.season}/><main id="main-content" tabIndex={-1}>
+    {standing && path === '/' && <div className="overview-bar"><span>LE CHRONIQUEUR DU ROYAUME</span><span><Clock3 size={13}/>{staticPages ? 'Récupération prévue' : 'Actualisation'} {staticPages ? '~' : 'toutes les '}{api.response!.meta.intervalMinutes} min</span></div>}
     {!standing ? <Empty loading={api.loading || api.response?.meta.refreshing} error={api.networkError ?? api.response?.meta.error} retry={api.retry}/> : <>
       {path === '/' ? <Home standing={standing}/> : path === '/formations' ? <Formations standing={standing}/> : rosterMatch ? <Formation key={rosterMatch[1]} id={rosterMatch[1]} standing={standing}/> : path === '/batailles' ? <><div className="page-intro"><div className="eyebrow">LES CHRONIQUES DU ROYAUME</div><h1>Les batailles du jour</h1><p>Les points quotidiens de nos sept prétendants, lorsque la source confirme leur date.</p></div><DailyCard full/></> : <><div className="empty-state"><h1>Cette route quitte le royaume.</h1><Link to="/" className="button">Revenir au classement <ArrowRight size={16}/></Link></div></>}
       <div className="source-bar"><Status meta={api.response!.meta} networkError={api.networkError}/><button className="refresh-button" onClick={() => { api.retry(); setChecked(true); setTimeout(() => setChecked(false), 5000); }}><RefreshCw size={13}/>{checked ? 'Cache vérifié' : 'Vérifier les nouvelles'}</button></div>
       {(api.response?.meta.error || api.networkError) && <div className="error-banner" role="alert"><WifiOff size={17}/><p><strong>Dernier résultat valide conservé.</strong> {api.networkError ?? api.response?.meta.error}</p></div>}
-      {checked && <p className="check-note" role="status"><Check size={13}/>Le cache est partagé. La prochaine récupération respecte l’intervalle de {api.response!.meta.intervalMinutes} minutes.</p>}
+      {checked && <p className="check-note" role="status"><Check size={13}/>{staticPages ? 'Dernier résultat publié consulté. Les nouvelles sont récupérées périodiquement.' : `Le cache est partagé. La prochaine récupération respecte l’intervalle de ${api.response!.meta.intervalMinutes} minutes.`}</p>}
     </>}
   </main><footer><div><Crown size={17}/><span>LE CONSEIL DES SEPT</span><small>Sept amis. Une saison. Une couronne.</small></div><a href="https://www.marqueur.com/hockey/mbr/tools/pool/index.php?nyx=219062" target="_blank" rel="noreferrer">Notre pool sur Marqueur <ExternalLink size={12}/></a><p>Résultats récupérés périodiquement · Aucune donnée présentée en direct</p></footer></>;
 }

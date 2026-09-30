@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "concurrently -k -n serveur,interface \"tsx watch server/index.ts\" \"vite --host 0.0.0.0\"",
     "build": "tsc --noEmit && vite build",
+    "build:pages": "tsc --noEmit && vite build --mode pages",
+    "sync:pages": "tsx server/export-pages.ts",
     "start": "tsx server/index.ts",
     "test": "tsx --test tests/*.test.ts",
     "test:ui": "playwright test"

@@ -11,5 +11,5 @@ export interface Roster { participantId: string; name: string; season: string; g
 export interface Daily { date: string; participants: Participant[]; sourceUrl: string }
 export interface Cached<T> { data: T; fetchedAt: string }
 export interface Snapshot { standing: Cached<Standing>; rosters: Record<string, Cached<Roster>>; daily: Cached<Daily> | null }
-export interface SyncMeta { fetchedAt: string | null; stale: boolean; refreshing: boolean; error: string | null; intervalMinutes: number; source: 'marqueur'; nextAttemptAt: string | null }
+export interface SyncMeta { fetchedAt: string | null; stale: boolean; refreshing: boolean; error: string | null; intervalMinutes: number; staleAfterMinutes?: number; source: 'marqueur'; nextAttemptAt: string | null }
 export interface ApiResponse<T> { data: T | null; meta: SyncMeta }
