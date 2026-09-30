@@ -8,7 +8,6 @@ export function apiHref(endpoint: string) {
   if (!staticPages) return endpoint;
   if (endpoint === '/api/standing') return `${baseUrl}data/standing.json`;
   if (endpoint === '/api/history') return `${baseUrl}data/history.json`;
-  if (endpoint === '/api/daily') return `${baseUrl}data/daily.json`;
   const id = endpoint.match(/^\/api\/rosters\/(\d+)$/)?.[1];
   if (!id) throw new Error('Formation introuvable.');
   return `${baseUrl}data/roster-${id}.json`;

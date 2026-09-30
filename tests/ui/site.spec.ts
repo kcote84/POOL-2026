@@ -10,7 +10,6 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/history', route => route.fulfill({ json: { data: { season: standing.season, records: [] }, meta } }));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.route('**/api/standing', route => route.fulfill({ json: { data: standing, meta } }));
-  await page.route('**/api/daily', route => route.fulfill({ json: { data: null, meta: { ...meta, fetchedAt: null, error: 'Tableau non daté.' } } }));
   await page.route('**/api/rosters/*', route => route.fulfill({ json: { data: rosters[route.request().url().split('/').pop()!], meta } }));
 });
 for (const width of [320, 390, 768, 1440]) test(`classement, formations et navigation à ${width}px`, async ({ page }) => {
@@ -80,16 +79,19 @@ test('une panne du serveur après chargement conserve les résultats dans le nav
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByRole('table').getByRole('row')).toHaveCount(8);
 });
-test('formations, batailles non validées et route inconnue', async ({ page }) => {
+test('formations, retrait des batailles et anciens liens', async ({ page }) => {
   await page.goto('/formations'); await expect(page.locator('.house-card')).toHaveCount(7);
-  await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Batailles du jour' }).click();
-  await expect(page.getByText('Le tableau quotidien de Marqueur ne précise pas la journée concernée.')).toBeVisible();
-  await expect(page.locator('.daily-results')).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link')).toHaveCount(2);
+  await page.goto('/batailles');
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { name: 'La course au Trône de fer' })).toBeVisible();
+  await expect(page.getByText(/batailles du jour/i)).toHaveCount(0);
+  await expect(page.locator('.daily-card')).toHaveCount(0);
   await page.goto('/formation/999'); await expect(page.getByText('Ce prétendant ne figure pas dans notre pool.')).toBeVisible();
 });
 test('contrastes, structure et libellés accessibles sur téléphone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const path of ['/', '/formations', '/formation/1252751', '/batailles']) {
+  for (const path of ['/', '/formations', '/formation/1252751']) {
     await page.goto(path); await expect(page.locator('.source-bar')).toBeVisible();
     const report = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
     expect(report.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => n.target) }))).toEqual([]);

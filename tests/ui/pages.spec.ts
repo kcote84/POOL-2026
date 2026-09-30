@@ -11,7 +11,6 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/POOL-2026/data/history.json', route => route.fulfill({ json: { data: { season: standing.season, records: [] }, meta } }));
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.route('**/POOL-2026/data/standing.json', r => r.fulfill({ json: { data: standing, meta } }));
-  await page.route('**/POOL-2026/data/daily.json', r => r.fulfill({ json: { data: null, meta: { ...meta, fetchedAt: null, error: 'Non daté.' } } }));
   await page.route('**/POOL-2026/data/roster-*.json', r => {
     const id = r.request().url().match(/roster-(\d+)\.json/)?.[1];
     return r.fulfill({ json: { data: id ? rosters[id] ?? null : null, meta } });
@@ -20,7 +19,7 @@ test.beforeEach(async ({ page }) => {
 for (const width of [320, 390, 1440]) test(`site compilé Pages sous /POOL-2026/ à ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  const forbiddenRequests: string[] = []; page.on('request', r => { if (r.url().includes('/api/') || r.url().includes('marqueur.com')) forbiddenRequests.push(r.url()); });
+  const forbiddenRequests: string[] = []; page.on('request', r => { if (r.url().includes('/api/') || r.url().includes('marqueur.com') || r.url().includes('/daily.json')) forbiddenRequests.push(r.url()); });
   await page.goto('/POOL-2026/');
   await expect(page.getByRole('heading', { name: 'La course au Trône de fer' })).toBeVisible();
   await expect(page.getByRole('table').getByRole('row')).toHaveCount(8);
@@ -42,6 +41,11 @@ for (const width of [320, 390, 1440]) test(`site compilé Pages sous /POOL-2026/
   await page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link', { name: 'Formations', exact: true }).click();
   await expect(page.locator('.house-card')).toHaveCount(7);
   await page.goBack(); await expect(page.getByRole('heading', { name: 'La course au Trône de fer' })).toBeVisible();
+  await page.goto('/POOL-2026/#/batailles');
+  await expect(page).toHaveURL(/\/POOL-2026\/#\/$/);
+  await expect(page.getByRole('heading', { name: 'La course au Trône de fer' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Navigation principale' }).getByRole('link')).toHaveCount(2);
+  await expect(page.getByText(/batailles du jour/i)).toHaveCount(0);
   await page.screenshot({ path: `test-results/pages-${width}.png`, fullPage: true });
   expect(errors).toEqual([]); expect(forbiddenRequests).toEqual([]);
 });

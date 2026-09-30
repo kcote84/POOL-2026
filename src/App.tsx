@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode, type MouseEvent } from 'react';
-import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronRight, Clock3, Crown, ExternalLink, Flag, LoaderCircle, RefreshCw, Shield, Star, Swords, Trophy, WifiOff } from 'lucide-react';
-import type { Daily, Participant, Roster, Standing, SyncMeta } from '../shared/types';
+import { ArrowDown, ArrowLeft, ArrowRight, Check, ChevronRight, Clock3, Crown, ExternalLink, Flag, LoaderCircle, RefreshCw, Shield, Star, Trophy, WifiOff } from 'lucide-react';
+import type { Participant, Roster, Standing, SyncMeta } from '../shared/types';
 import { houses } from './Crest';
 import { Portrait } from './Portrait';
 import { profiles } from './participants';
@@ -42,7 +42,6 @@ function Header({ path, season }: { path: string; season?: string }) {
     <nav aria-label="Navigation principale">
       <Link to="/" className={path === '/' ? 'active' : ''}><Trophy size={15}/>Classement</Link>
       <Link to="/formations" className={path.startsWith('/formation') ? 'active' : ''}><Shield size={15}/>Formations</Link>
-      <Link to="/batailles" className={path === '/batailles' ? 'active' : ''}><Swords size={16}/>Batailles du jour</Link>
     </nav>
     <span className="season"><span className="status-dot"/>SAISON {season ?? 'EN COURS'}</span>
   </div></header>;
@@ -93,16 +92,8 @@ function FavoriteHouse({ standing }: { standing: Standing }) {
   const selected = standing.participants.find(p => p.id === favorite);
   return <section className="favorite-house" aria-label="Ma maison favorite"><Star size={17}/><label htmlFor="favorite-house">Ma maison<select id="favorite-house" aria-label="Ma maison" value={selected?.id ?? ''} onChange={e => { setFavorite(e.target.value); try { localStorage.setItem('keven2026.favorite', e.target.value); } catch { /* Facultatif, aucun compte nécessaire. */ } }}><option value="">Choisir ma maison</option>{standing.participants.map(p => <option value={p.id} key={p.id}>{p.name} · {profiles[p.name]?.realName}</option>)}</select></label>{selected ? <Link to={`/formation/${selected.id}`} className="favorite-link">Ma formation <ArrowRight size={15}/></Link> : <span>Retrouvez votre formation en un clic.</span>}</section>;
 }
-function DailyCard({ full = false }: { full?: boolean }) {
-  const api = useApi<Daily>('/api/daily');
-  const daily = api.response?.data;
-  return <section className={`daily-card ${full ? 'daily-full' : ''}`}><div className="daily-heading"><Swords size={21}/><h2>Les batailles du jour</h2></div>
-    {daily ? <><p className="daily-date">{daily.date}</p><div className="daily-results">{daily.participants.map(p => <div key={p.id}><Link to={`/formation/${p.id}`} className="daily-participant"><Portrait name={p.name}/><span>{p.name}<small className="real-name">{profiles[p.name]?.realName}</small></span></Link><strong>{format.format(p.points)} <small>pts</small></strong></div>)}</div>{api.response && <Status meta={api.response.meta}/>}</> : <><div className="daily-symbol"><Swords size={34}/><span>✦</span></div><span className="label">EN ATTENTE DE NOUVELLES FIABLES</span><p>Le tableau quotidien de Marqueur ne précise pas la journée concernée.</p><p className="muted">Les résultats s’afficheront ici lorsque leur date pourra être confirmée.</p>{api.networkError && <p className="warning-text">{api.networkError}</p>}</>}
-    <a className="text-link" href="https://www.marqueur.com/hockey/mbr/tools/pool/standing_01.php?nyx=219062&c=0" target="_blank" rel="noreferrer">Consulter Marqueur <ExternalLink size={13}/></a>
-  </section>;
-}
 function Home({ standing }: { standing: Standing }) {
-  return <><Hero season={standing.season}/><FavoriteHouse standing={standing}/><div className="dashboard"><Rankings standing={standing}/><aside><Leader participants={standing.participants}/><DailyCard/><div className="quote"><span>“</span><p>Une couronne se gagne<br/>un point à la fois.</p><small>LA DEVISE DU CONSEIL</small></div></aside></div><PoolInformation standing={standing}/></>;
+  return <><Hero season={standing.season}/><FavoriteHouse standing={standing}/><div className="dashboard"><Rankings standing={standing}/><aside><Leader participants={standing.participants}/><div className="quote"><span>“</span><p>Une couronne se gagne<br/>un point à la fois.</p><small>LA DEVISE DU CONSEIL</small></div></aside></div><PoolInformation standing={standing}/></>;
 }
 function Formations({ standing }: { standing: Standing }) {
   return <><div className="page-intro"><div className="eyebrow">LES SEPT MAISONS</div><h1>Les armées du royaume</h1><p>Chaque sélection compte. Explorez les joueurs, les gardiens et les équipes de chaque prétendant.</p></div><div className="houses-grid">{standing.participants.map(p => <Link to={`/formation/${p.id}`} key={p.id} className="house-card"><span className="house-rank">RANG {String(p.rank).padStart(2, '0')}</span><Portrait name={p.name} large/><h2>{p.name}</h2><p className="real-name">{profiles[p.name]?.realName}</p><p className="participant-motto">{houses[p.name]?.motto}</p><div><strong>{format.format(p.points)} <small>pts</small></strong><span>Voir la formation <ArrowRight size={15}/></span></div></Link>)}</div></>;
@@ -145,8 +136,8 @@ export function App() {
   const previousPath = useRef(path);
   const api = useApi<Standing>('/api/standing');
   const [checked, setChecked] = useState(false);
-  useEffect(() => { const handler = () => setPath(currentPath()); window.addEventListener('popstate', handler); window.addEventListener('hashchange', handler); return () => { window.removeEventListener('popstate', handler); window.removeEventListener('hashchange', handler); }; }, []);
-  useEffect(() => { const title = path.startsWith('/formation/') ? api.response?.data?.participants.find(p => path.endsWith(`/${p.id}`))?.name : path === '/formations' ? 'Les formations' : path === '/batailles' ? 'Les batailles du jour' : 'La course au Trône de fer'; document.title = `${title ?? 'La formation'} · Keven2026`; if (previousPath.current !== path) document.getElementById('main-content')?.focus({ preventScroll: true }); previousPath.current = path; }, [path, api.response?.data?.season]);
+  useEffect(() => { const handler = () => { const next = currentPath(); if (/^\/batailles\/?$/.test(next)) { window.history.replaceState({}, '', pageHref('/')); setPath('/'); } else setPath(next); }; handler(); window.addEventListener('popstate', handler); window.addEventListener('hashchange', handler); return () => { window.removeEventListener('popstate', handler); window.removeEventListener('hashchange', handler); }; }, []);
+  useEffect(() => { const title = path.startsWith('/formation/') ? api.response?.data?.participants.find(p => path.endsWith(`/${p.id}`))?.name : path === '/formations' ? 'Les formations' : 'La course au Trône de fer'; document.title = `${title ?? 'La formation'} · Keven2026`; if (previousPath.current !== path) document.getElementById('main-content')?.focus({ preventScroll: true }); previousPath.current = path; }, [path, api.response?.data?.season]);
   const standing = api.response?.data;
   const rosterMatch = path.match(/^\/formation\/(\d+)\/?$/);
   return <><DragonIntro/><a className="skip-link" href="#main-content" onClick={e => { e.preventDefault(); const main = document.getElementById('main-content'); main?.focus(); main?.scrollIntoView({ block: 'start' }); }}>Aller au contenu</a><Header path={path} season={standing?.season}/><main id="main-content" tabIndex={-1}>
@@ -155,7 +146,7 @@ export function App() {
       <div className="source-bar"><Status meta={api.response!.meta} networkError={api.networkError}/><button className="refresh-button" onClick={() => { api.retry(); setChecked(true); setTimeout(() => setChecked(false), 5000); }}><RefreshCw size={13}/>{checked ? 'Cache vérifié' : 'Vérifier les nouvelles'}</button></div>
       {(api.response?.meta.error || api.networkError) && <div className="error-banner" role="alert"><WifiOff size={17}/><p><strong>Dernier résultat valide conservé.</strong> {api.networkError ?? api.response?.meta.error}</p></div>}
       {checked && <p className="check-note" role="status"><Check size={13}/>{staticPages ? 'Dernier résultat publié consulté. Les nouvelles sont récupérées périodiquement.' : `Le cache est partagé. La prochaine récupération respecte l’intervalle de ${api.response!.meta.intervalMinutes} minutes.`}</p>}
-      {path === '/' ? <Home standing={standing}/> : path === '/formations' ? <Formations standing={standing}/> : rosterMatch ? <Formation key={rosterMatch[1]} id={rosterMatch[1]} standing={standing}/> : path === '/batailles' ? <><div className="page-intro"><div className="eyebrow">LES CHRONIQUES DU ROYAUME</div><h1>Les batailles du jour</h1><p>Les points quotidiens de nos sept prétendants, lorsque la source confirme leur date.</p></div><DailyCard full/></> : <><div className="empty-state"><h1>Cette route quitte le royaume.</h1><Link to="/" className="button">Revenir au classement <ArrowRight size={16}/></Link></div></>}
+      {path === '/' ? <Home standing={standing}/> : path === '/formations' ? <Formations standing={standing}/> : rosterMatch ? <Formation key={rosterMatch[1]} id={rosterMatch[1]} standing={standing}/> : <><div className="empty-state"><h1>Cette route quitte le royaume.</h1><Link to="/" className="button">Revenir au classement <ArrowRight size={16}/></Link></div></>}
     </>}
   </main><footer><div><Crown size={17}/><span>LE CONSEIL DES SEPT</span><small>Sept amis. Une saison. Une couronne.</small></div><a href="https://www.marqueur.com/hockey/mbr/tools/pool/index.php?nyx=219062" target="_blank" rel="noreferrer">Notre pool sur Marqueur <ExternalLink size={12}/></a><button className="replay-dragon" onClick={() => window.dispatchEvent(new Event('replay-dragon'))}>Revoir le dragon <ArrowRight size={13}/></button><p>Résultats récupérés périodiquement · Aucune donnée présentée en direct</p></footer></>;
 }

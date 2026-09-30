@@ -43,7 +43,7 @@ L’extracteur refuse désormais une ligne de gardien ou d’équipe dont les vi
 
 Les pages publiques ont été testées par HTTP depuis Node sans cookies ni connexion le **30 septembre 2026**. Aucune API officielle n’est utilisée. Leur disponibilité et leur format peuvent évoluer.
 
-Le tableau `standing_01.php` a été récupéré, mais son sous-titre indique **TOTAL**, sans date identifiable. **Les batailles du jour restent indisponibles**, avec une explication visible. L’extracteur exige une date calendaire explicite correspondant au jour courant à Montréal avant de publier ces résultats. Aucune donnée n’est présentée comme étant en direct.
+Le tableau `standing_01.php` indique **TOTAL**, sans date identifiable. La section « Batailles du jour » et son lien ont été retirés : aucun résultat quotidien fiable ne pouvait être affiché. Les anciens liens vers `/batailles` redirigent vers le classement. L’extracteur conserve sa validation stricte des dates pour la compatibilité des instantanés existants.
 
 ## Synchronisation et cache
 

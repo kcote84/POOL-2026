@@ -9,7 +9,6 @@ const meta = { fetchedAt: new Date().toISOString(), stale: false, refreshing: fa
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/history', route => route.fulfill({ json: { data: { season: standing.season, records: [] }, meta } }));
   await page.route('**/api/standing', r => r.fulfill({json:{data:standing,meta}}));
-  await page.route('**/api/daily', r => r.fulfill({json:{data:null,meta}}));
   await page.route('**/api/rosters/*', r => r.fulfill({json:{data:roster,meta}}));
 });
 test('PJ et moyenne du classement, recherche et totaux Panthers', async ({page}) => {
