@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="600" viewBox="0 0 1100 600">
+<defs>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#303335"/><stop offset="1" stop-color="#151b1d"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#a39369" stop-opacity=".27"/><stop offset="1" stop-color="#a39369" stop-opacity="0"/></radialGradient>
+ <linearGradient id="stone" x2=".7" y2="1"><stop stop-color="#55564d"/><stop offset="1" stop-color="#222a2c"/></linearGradient>
+ <linearGradient id="veil" x2="1" y2="0"><stop stop-color="#141819"/><stop offset=".3" stop-color="#141819" stop-opacity=".8"/><stop offset=".7" stop-color="#141819" stop-opacity="0"/></linearGradient>
+ <linearGradient id="bottom" x2="0" y2="1"><stop stop-color="#141819" stop-opacity="0"/><stop offset="1" stop-color="#141819"/></linearGradient>
+ <filter id="fog"><feGaussianBlur stdDeviation="18"/></filter>
+ <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".65" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope=".08"/></feComponentTransfer><feBlend in="SourceGraphic" mode="soft-light"/></filter>
+ <pattern id="masonry" width="36" height="18" patternUnits="userSpaceOnUse"><path d="M0 0h36M0 18h36M18 0v9M0 9h36M6 9v9M30 9v9" fill="none" stroke="#a8a38c" stroke-opacity=".1"/></pattern>
+ <g id="tree"><path d="m0 0-15 36h8l-14 28h12l-16 25h23v22h5V89h23L9 64h12L7 36h8Z" fill="#111b1d"/></g>
+ <g id="window"><path d="M0 12V4q3-8 6 0v8Z" fill="#bba476" opacity=".5"/></g>
+</defs>
+<rect width="1100" height="600" fill="url(#sky)"/>
+<ellipse cx="740" cy="240" rx="400" ry="330" fill="url(#glow)"/>
+<circle cx="785" cy="120" r="68" fill="none" stroke="#d5c293" stroke-opacity=".15"/><circle cx="785" cy="120" r="61" fill="#c8b68a" opacity=".08"/>
+<path d="m0 345 180-110 85 50 114-100 143 100 159-130 113 81 129-46 177 140v270H0" fill="#3b4140" opacity=".42"/>
+<path d="m0 405 215-92 88 51 191-98 150 81 150-105 138 87 168-21v292H0" fill="#232f32"/>
+<path d="m376 448 171-31 47-87 79-9 43-49 68 17 85 107 145 52 86 152H273Z" fill="#303735"/>
+<g filter="url(#grain)">
+ <path d="M589 374V230l-11-10v-18h15v9h13v-9h15v9h13v-9h14v18l-10 10v132Z" fill="url(#stone)"/>
+ <path d="m578 202 35-69 35 69Z" fill="#1c2729"/><path d="m614 134 1-42 32 8-32 12" fill="#716343"/>
+ <path d="M650 371V191h-10v-21h14v8h11v-8h13v8h12v-8h14v21h-10v180Z" fill="url(#stone)"/>
+ <path d="M709 388V159h-12v-24h15v9h12v-9h15v9h12v-9h15v24h-12v219Z" fill="url(#stone)"/>
+ <path d="m697 135 34-78 35 78Z" fill="#1b2528"/><path d="m732 58 1-39 40 8-40 15" fill="#83704d"/>
+ <path d="M785 386V211l-10-12v-18h14v9h11v-9h15v9h11v-9h15v18l-10 12v175Z" fill="url(#stone)"/>
+ <path d="m775 181 33-66 33 66Z" fill="#1b2528"/>
+ <path d="M626 384V279h172v105Z" fill="url(#stone)"/><path d="m626 279 43-59h89l40 59Z" fill="#1d282a"/>
+ <path d="M560 423V335h17v12h16v-12h17v12h16v-12h17v12h16v-12h17v12h16v-12h17v12h16v-12h17v12h16v-12h17v12h16v-12h17v12h16v-12h17v12h16v-12h17v100Z" fill="url(#stone)"/>
+ <path d="M557 422V316l-8-12v-15h16v8h13v-8h16v15l-8 12v106ZM832 435V325l-8-12v-15h16v8h13v-8h16v15l-8 12v110Z" fill="url(#stone)"/>
+ <path d="M686 422v-35q21-44 42 0v35" fill="#10191b"/><path d="M689 422v-34q18-39 36 0" fill="none" stroke="#a69c78" stroke-opacity=".3"/>
+ <path d="M557 289h312v150H557Z" fill="url(#masonry)"/>
+ <g><use href="#window" x="608" y="240"/><use href="#window" x="608" y="275"/><use href="#window" x="669" y="204"/><use href="#window" x="669" y="242"/><use href="#window" x="729" y="176"/><use href="#window" x="729" y="218"/><use href="#window" x="729" y="254"/><use href="#window" x="805" y="227"/><use href="#window" x="805" y="264"/><use href="#window" x="650" y="294"/><use href="#window" x="677" y="294"/><use href="#window" x="749" y="294"/><use href="#window" x="776" y="294"/></g>
+</g>
+<g filter="url(#fog)" fill="#87918b" opacity=".1"><ellipse cx="740" cy="425" rx="280" ry="26"/><ellipse cx="950" cy="480" rx="270" ry="32"/><ellipse cx="340" cy="365" rx="280" ry="22"/></g>
+<path d="m0 510 213-59 154 42 186-39 135 78 180-57 232 42v83H0Z" fill="#162124"/>
+<g><use href="#tree" transform="translate(1040 311) scale(2.4)"/><use href="#tree" transform="translate(969 366) scale(1.6)"/><use href="#tree" transform="translate(1080 410) scale(1.5)"/><use href="#tree" transform="translate(904 423) scale(.9)"/><use href="#tree" transform="translate(480 437) scale(.9)"/><use href="#tree" transform="translate(390 389) scale(1.6)"/><use href="#tree" transform="translate(328 422) scale(1.5)"/></g>
+<path d="m0 590 181-37 193 18 164-18 158 20 204-24 200 31v20H0" fill="#111819"/>
+<rect width="1100" height="600" fill="url(#veil)"/><rect y="330" width="1100" height="270" fill="url(#bottom)"/>
+</svg>

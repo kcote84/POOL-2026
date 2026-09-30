@@ -1,0 +1,11 @@
+node_modules/
+node_modules-incomplet/
+dist/
+.cache/
+.research/
+.env
+test-results/
+playwright-report/
+*.log
+.idea/
+__pycache__/
