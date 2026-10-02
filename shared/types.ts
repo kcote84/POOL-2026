@@ -14,5 +14,6 @@ export interface HistoryParticipant { id: string; name: string; rank: number; po
 export interface HistoryRecord { date: string; observedAt: string; participants: HistoryParticipant[] }
 export interface StandingHistory { season: string; records: HistoryRecord[] }
 export interface Snapshot { history?: StandingHistory; standing: Cached<Standing>; rosters: Record<string, Cached<Roster>>; daily: Cached<Daily> | null }
-export interface SyncMeta { fetchedAt: string | null; stale: boolean; refreshing: boolean; error: string | null; intervalMinutes: number; staleAfterMinutes?: number; source: 'marqueur'; nextAttemptAt: string | null }
+export interface SyncMeta { schedule?: 'daily-montreal'; fetchedAt: string | null; stale: boolean; refreshing: boolean; error: string | null; intervalMinutes: number; staleAfterMinutes?: number; source: 'marqueur'; nextAttemptAt: string | null }
 export interface ApiResponse<T> { data: T | null; meta: SyncMeta }
+

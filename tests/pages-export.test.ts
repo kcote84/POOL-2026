@@ -8,7 +8,7 @@ import { createServer } from 'node:http';
 import { PoolCache } from '../server/cache';
 import { exportPages } from '../server/export-pages';
 import { STANDING_URL, DAILY_URL } from '../server/parser';
-import { currentMeta } from '../shared/freshness';
+import { currentMeta, dailyStale, morningCollected } from '../shared/freshness';
 import type { ApiResponse, Standing, SyncMeta } from '../shared/types';
 
 async function setup() {
@@ -60,4 +60,44 @@ test('la fraîcheur d’un instantané statique est recalculée même si sa publ
   const meta: SyncMeta = { fetchedAt: '2026-09-30T12:00:00Z', stale: false, refreshing: false, error: null, intervalMinutes: 15, staleAfterMinutes: 45, source: 'marqueur', nextAttemptAt: null };
   assert.equal(currentMeta(meta, Date.parse('2026-09-30T12:30:00Z')).stale, false);
   assert.equal(currentMeta(meta, Date.parse('2026-09-30T12:46:00Z')).stale, true);
+});
+
+
+test('horaire quotidien : échéance et secours à Montréal, été et hiver', () => {
+  assert.equal(morningCollected('2026-10-02T10:14:59Z', Date.parse('2026-10-02T12:15:00Z')), false);
+  assert.equal(morningCollected('2026-10-02T10:15:00Z', Date.parse('2026-10-02T12:15:00Z')), true);
+  assert.equal(dailyStale('2026-10-01T10:16:00Z', Date.parse('2026-10-02T13:14:00Z')), false);
+  assert.equal(dailyStale('2026-10-01T10:16:00Z', Date.parse('2026-10-02T13:15:00Z')), true);
+  assert.equal(dailyStale('2026-10-02T10:16:00Z', Date.parse('2026-10-02T23:00:00Z')), false);
+  assert.equal(morningCollected('2026-12-02T11:15:00Z', Date.parse('2026-12-02T13:15:00Z')), true);
+  assert.equal(dailyStale('2026-10-31T10:16:00Z', Date.parse('2026-11-01T14:14:00Z')), false);
+  assert.equal(dailyStale('2026-10-31T10:16:00Z', Date.parse('2026-11-01T14:15:00Z')), true);
+  assert.equal(dailyStale(null), true);
+});
+test('export quotidien : secours sans requête, lancement manuel forcé et échec signalé', async () => {
+  const { cache, output, fail } = await setup();
+  await exportPages(cache, output);
+  // Fix the clock after the morning collection, independent of the test runner time.
+  const realNow = Date.now;
+  const stamp = '2026-10-02T10:16:00.000Z';
+  const snapshot = cache.snapshot!;
+  snapshot.standing.fetchedAt = stamp;
+  for (const roster of Object.values(snapshot.rosters)) roster.fetchedAt = stamp;
+  snapshot.history = undefined;
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(cache.config.cacheFile, JSON.stringify(snapshot));
+  Date.now = () => Date.parse('2026-10-02T12:15:00Z');
+  try {
+    fail();
+    const skipped = await exportPages(cache, output, undefined, { daily: true, scheduled: true });
+    assert.equal(skipped.skipped, true);
+    assert.equal(skipped.failed, false);
+    const failed = await exportPages(cache, output, undefined, { daily: true });
+    assert.equal(failed.failed, true);
+    assert.equal(failed.fetchedAt, stamp);
+    const response = JSON.parse(await readFile(join(output, 'standing.json'), 'utf8'));
+    assert.equal(response.meta.schedule, 'daily-montreal');
+    assert.equal(response.meta.nextAttemptAt, null);
+    assert.match(response.meta.error, /503/);
+  } finally { Date.now = realNow; }
 });

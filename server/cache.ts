@@ -72,9 +72,9 @@ export class PoolCache {
     }
   }
   get refreshing() { return this.pending !== null; }
-  refresh(): Promise<void> {
+  refresh(force = false): Promise<void> {
     if (this.pending) return this.pending;
-    if (Date.now() - this.lastAttempt < this.config.intervalMs) return Promise.resolve();
+    if (!force && Date.now() - this.lastAttempt < this.config.intervalMs) return Promise.resolve();
     this.lastAttempt = Date.now();
     this.pending = this.collect().finally(() => { this.pending = null; });
     return this.pending;
@@ -119,3 +119,4 @@ export class PoolCache {
     } };
   }
 }
+

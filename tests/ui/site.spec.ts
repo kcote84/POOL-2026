@@ -75,7 +75,7 @@ test('première récupération et indisponibilité sans résultats fictifs', asy
 test('une panne du serveur après chargement conserve les résultats dans le navigateur', async ({ page }) => {
   await page.goto('/'); await expect(page.getByRole('table')).toBeVisible();
   await page.route('**/api/standing', r => r.abort('connectionfailed'));
-  await page.getByRole('button', { name: 'Vérifier les nouvelles' }).click();
+  await page.getByRole('button', { name: 'Actualiser l’affichage' }).click();
   await expect(page.getByRole('alert')).toBeVisible();
   await expect(page.getByRole('table').getByRole('row')).toHaveCount(8);
 });
@@ -97,3 +97,4 @@ test('contrastes, structure et libellés accessibles sur téléphone', async ({ 
     expect(report.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => n.target) }))).toEqual([]);
   }
 });
+
