@@ -64,14 +64,19 @@ test('la fraîcheur d’un instantané statique est recalculée même si sa publ
 
 
 test('horaire quotidien : échéance et secours à Montréal, été et hiver', () => {
-  assert.equal(morningCollected('2026-10-02T10:14:59Z', Date.parse('2026-10-02T12:15:00Z')), false);
-  assert.equal(morningCollected('2026-10-02T10:15:00Z', Date.parse('2026-10-02T12:15:00Z')), true);
-  assert.equal(dailyStale('2026-10-01T10:16:00Z', Date.parse('2026-10-02T13:14:00Z')), false);
-  assert.equal(dailyStale('2026-10-01T10:16:00Z', Date.parse('2026-10-02T13:15:00Z')), true);
-  assert.equal(dailyStale('2026-10-02T10:16:00Z', Date.parse('2026-10-02T23:00:00Z')), false);
-  assert.equal(morningCollected('2026-12-02T11:15:00Z', Date.parse('2026-12-02T13:15:00Z')), true);
-  assert.equal(dailyStale('2026-10-31T10:16:00Z', Date.parse('2026-11-01T14:14:00Z')), false);
-  assert.equal(dailyStale('2026-10-31T10:16:00Z', Date.parse('2026-11-01T14:15:00Z')), true);
+  assert.equal(morningCollected('2026-10-02T08:59:59Z', Date.parse('2026-10-02T10:00:00Z')), false);
+  assert.equal(morningCollected('2026-10-02T09:00:00Z', Date.parse('2026-10-02T10:00:00Z')), true);
+  assert.equal(morningCollected('2026-10-01T09:00:00Z', Date.parse('2026-10-02T10:00:00Z')), false);
+  assert.equal(dailyStale('2026-10-01T09:01:00Z', Date.parse('2026-10-02T10:59:59Z')), false);
+  assert.equal(dailyStale('2026-10-01T09:01:00Z', Date.parse('2026-10-02T11:00:00Z')), true);
+  assert.equal(dailyStale('2026-10-02T09:00:00Z', Date.parse('2026-10-02T23:00:00Z')), false);
+  assert.equal(dailyStale('2026-10-02T08:59:59Z', Date.parse('2026-10-02T11:00:00Z')), true);
+  assert.equal(morningCollected('2026-12-02T09:59:59Z', Date.parse('2026-12-02T11:00:00Z')), false);
+  assert.equal(morningCollected('2026-12-02T10:00:00Z', Date.parse('2026-12-02T11:00:00Z')), true);
+  assert.equal(dailyStale('2026-10-31T09:01:00Z', Date.parse('2026-11-01T11:59:59Z')), false);
+  assert.equal(dailyStale('2026-10-31T09:01:00Z', Date.parse('2026-11-01T12:00:00Z')), true);
+  assert.equal(dailyStale('2026-03-07T10:01:00Z', Date.parse('2026-03-08T10:59:59Z')), false);
+  assert.equal(dailyStale('2026-03-07T10:01:00Z', Date.parse('2026-03-08T11:00:00Z')), true);
   assert.equal(dailyStale(null), true);
 });
 test('export quotidien : secours sans requête, lancement manuel forcé et échec signalé', async () => {
@@ -79,14 +84,14 @@ test('export quotidien : secours sans requête, lancement manuel forcé et éche
   await exportPages(cache, output);
   // Fix the clock after the morning collection, independent of the test runner time.
   const realNow = Date.now;
-  const stamp = '2026-10-02T10:16:00.000Z';
+  const stamp = '2026-10-02T09:00:00.000Z';
   const snapshot = cache.snapshot!;
   snapshot.standing.fetchedAt = stamp;
   for (const roster of Object.values(snapshot.rosters)) roster.fetchedAt = stamp;
   snapshot.history = undefined;
   const { writeFile } = await import('node:fs/promises');
   await writeFile(cache.config.cacheFile, JSON.stringify(snapshot));
-  Date.now = () => Date.parse('2026-10-02T12:15:00Z');
+  Date.now = () => Date.parse('2026-10-02T10:00:00Z');
   try {
     fail();
     const skipped = await exportPages(cache, output, undefined, { daily: true, scheduled: true });
@@ -99,5 +104,27 @@ test('export quotidien : secours sans requête, lancement manuel forcé et éche
     assert.equal(response.meta.schedule, 'daily-montreal');
     assert.equal(response.meta.nextAttemptAt, null);
     assert.match(response.meta.error, /503/);
+  } finally { Date.now = realNow; }
+});
+
+test('le secours de 6 h retente Marqueur si le relevé précède 5 h', async () => {
+  const { cache, output, fail } = await setup();
+  await exportPages(cache, output);
+  const snapshot = cache.snapshot!;
+  const stamp = '2026-10-02T08:59:59.000Z';
+  snapshot.standing.fetchedAt = stamp;
+  for (const roster of Object.values(snapshot.rosters)) roster.fetchedAt = stamp;
+  snapshot.history = undefined;
+  const { writeFile } = await import('node:fs/promises');
+  await writeFile(cache.config.cacheFile, JSON.stringify(snapshot));
+  const realNow = Date.now;
+  Date.now = () => Date.parse('2026-10-02T10:00:00Z');
+  try {
+    fail();
+    const result = await exportPages(cache, output, undefined, { daily: true, scheduled: true });
+    assert.equal(result.skipped, false);
+    assert.equal(result.failed, true);
+    assert.equal(result.fetchedAt, stamp);
+    assert.match(cache.error!, /503/);
   } finally { Date.now = realNow; }
 });

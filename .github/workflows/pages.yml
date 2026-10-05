@@ -6,9 +6,9 @@ on:
   workflow_dispatch:
   schedule:
     # Heure du Québec, changements d’heure inclus ; déclenchement approximatif.
-    - cron: '15 6 * * *'
+    - cron: '0 5 * * *'
       timezone: America/Toronto
-    - cron: '15 8 * * *'
+    - cron: '0 6 * * *'
       timezone: America/Toronto
 
 permissions:

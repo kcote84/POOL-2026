@@ -47,6 +47,8 @@ Le tableau `standing_01.php` indique **TOTAL**, sans date identifiable. La secti
 
 ## Synchronisation et cache
 
+Vérification du 5 octobre 2026 à 5 h 57 (Québec) : le site publié affichait encore le relevé du 4 octobre à 11 h 22. Une lecture publique du classement et des sept formations Marqueur confirme les totaux suivants : Sir Jorah 59, Lord Baelish 56, Greyworm 52, Sandor Cleagan 50, Bronn 48, Ned Stark 42 et Podrick Payne 39. Les sommes des sélections, les catégories et les totaux concordent ; l’écart observé provient de la date du relevé publié, sans erreur de calcul reproduite. Les valeurs de cette vérification sont historiques, jamais utilisées comme données de production.
+
 Copier `.env.example` vers `.env` pour changer la configuration. Le lanceur copie aussi ce fichier dans le dossier local.
 
 | Paramètre | Valeur par défaut | Effet |
@@ -86,7 +88,7 @@ La configuration Pages doit utiliser **GitHub Actions**, et non publier les sour
 
 Les formations utilisent des liens tels que `/POOL-2026/#/formation/1252751` : l’actualisation d’une page de formation fonctionne sans règle de réécriture côté hébergeur. Les polices, ornements et fichiers JSON utilisent tous le préfixe du dépôt. Aucun navigateur ne contacte directement Marqueur.
 
-La récupération est planifiée chaque jour à **6 h 15, heure du Québec** (`America/Toronto`, changement d’heure inclus), avec une tentative de secours à **8 h 15**. Le secours ne consulte pas Marqueur si un relevé validé depuis 6 h 15 existe déjà. Les publications sur push et les lancements manuels forcent une récupération. GitHub peut retarder les tâches ; l’horodatage affiché reste celui de la récupération réellement réussie. La fraîcheur est recalculée côté navigateur : après 9 h 15, un relevé antérieur à 6 h 15 ce jour-là est signalé comme ancien. Avant cette échéance, le relevé du matin précédent reste acceptable. Le bouton « Actualiser l’affichage » relit uniquement les fichiers publiés. Vérifier l’onglet **Actions → Publier le royaume** pour les journaux et pour lancer manuellement un cycle. GitHub peut désactiver les tâches planifiées d’un dépôt public après une longue période d’inactivité ; les réactiver dans Actions si nécessaire.
+La récupération est planifiée chaque jour à **5 h, heure du Québec** (`America/Toronto`, changement d’heure inclus), avec une tentative de secours à **6 h**. Le secours ne consulte pas Marqueur si un relevé validé depuis 5 h existe déjà. Les publications sur push et les lancements manuels forcent une récupération. GitHub peut retarder les tâches ; l’horodatage affiché reste celui de la récupération réellement réussie. La fraîcheur est recalculée côté navigateur : après 7 h, un relevé antérieur à 5 h ce jour-là est signalé comme ancien. Avant cette échéance, le relevé du matin précédent reste acceptable. Le bouton « Actualiser l’affichage » relit uniquement les fichiers publiés. Vérifier l’onglet **Actions → Publier le royaume** pour les journaux et pour lancer manuellement un cycle. GitHub peut désactiver les tâches planifiées d’un dépôt public après une longue période d’inactivité ; les réactiver dans Actions si nécessaire.
 
 Une récupération échouée conserve et publie le dernier cache, puis marque le workflow en échec. Le résumé Actions indique le résultat et la date réelle. Les notifications d’échec dépendent des préférences de notification GitHub du compte ; aucun courriel externe n’est configuré.
 

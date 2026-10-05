@@ -8,15 +8,15 @@ export function montrealClock(now: number) {
 export function morningCollected(fetchedAt: string | null, now = Date.now()) {
   if (!fetchedAt || !Number.isFinite(Date.parse(fetchedAt))) return false;
   const fetched = montrealClock(Date.parse(fetchedAt));
-  return fetched.date === montrealClock(now).date && fetched.minutes >= 375;
+  return fetched.date === montrealClock(now).date && fetched.minutes >= 300;
 }
 export function dailyStale(fetchedAt: string | null, now = Date.now()) {
   if (!fetchedAt || !Number.isFinite(Date.parse(fetchedAt))) return true;
   const today = montrealClock(now);
-  // Three hours of grace after 06:15, including the 08:15 fallback.
-  const expected = today.minutes >= 555 ? today.date : new Date(Date.parse(`${today.date}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
+  // Délai de grâce jusqu’à 7 h, une heure après le secours de 6 h.
+  const expected = today.minutes >= 420 ? today.date : new Date(Date.parse(`${today.date}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
   const fetched = montrealClock(Date.parse(fetchedAt));
-  return fetched.date < expected || (fetched.date === expected && fetched.minutes < 375);
+  return fetched.date < expected || (fetched.date === expected && fetched.minutes < 300);
 }
 export function currentMeta(meta: SyncMeta, now = Date.now()): SyncMeta {
   return { ...meta, stale: meta.schedule === 'daily-montreal' ? dailyStale(meta.fetchedAt, now) : meta.stale || !meta.fetchedAt || now - Date.parse(meta.fetchedAt) > (meta.staleAfterMinutes ?? 45) * 60_000 };

@@ -55,7 +55,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   });
   const result = await exportPages(cache, resolve('public/data'), process.env.PAGES_SEED_URL, { daily: true, scheduled: process.env.GITHUB_EVENT_NAME === 'schedule' });
   if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, `sync_failed=${result.failed}\n`);
-  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `## Synchronisation Marqueur\n- Horaire : 06:15 America/Toronto ; secours 08:15.\n- Résultat : ${result.failed ? 'ÉCHEC — ancien relevé conservé' : result.skipped ? 'relevé du matin déjà disponible' : 'récupération réussie'}.\n- Dernier relevé : ${result.fetchedAt ?? 'aucun'}.\n`);
+  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY, `## Synchronisation Marqueur\n- Horaire : 05:00 America/Toronto ; secours 06:00.\n- Résultat : ${result.failed ? 'ÉCHEC — ancien relevé conservé' : result.skipped ? 'relevé du matin déjà disponible' : 'récupération réussie'}.\n- Dernier relevé : ${result.fetchedAt ?? 'aucun'}.\n`);
   if (result.failed && !process.env.GITHUB_ACTIONS) process.exitCode = 1;
 }
 
