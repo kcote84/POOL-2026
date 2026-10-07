@@ -79,7 +79,7 @@ test('horaire quotidien : échéance et secours à Montréal, été et hiver', (
   assert.equal(dailyStale('2026-03-07T10:01:00Z', Date.parse('2026-03-08T11:00:00Z')), true);
   assert.equal(dailyStale(null), true);
 });
-test('export quotidien : secours sans requête, lancement manuel forcé et échec signalé', async () => {
+test('un cache récent ne bloque pas la reprise après une publication manquée', async () => {
   const { cache, output, fail } = await setup();
   await exportPages(cache, output);
   // Fix the clock after the morning collection, independent of the test runner time.
@@ -94,9 +94,6 @@ test('export quotidien : secours sans requête, lancement manuel forcé et éche
   Date.now = () => Date.parse('2026-10-02T10:00:00Z');
   try {
     fail();
-    const skipped = await exportPages(cache, output, undefined, { daily: true, scheduled: true });
-    assert.equal(skipped.skipped, true);
-    assert.equal(skipped.failed, false);
     const failed = await exportPages(cache, output, undefined, { daily: true });
     assert.equal(failed.failed, true);
     assert.equal(failed.fetchedAt, stamp);
@@ -107,7 +104,7 @@ test('export quotidien : secours sans requête, lancement manuel forcé et éche
   } finally { Date.now = realNow; }
 });
 
-test('le secours de 6 h retente Marqueur si le relevé précède 5 h', async () => {
+test('une nouvelle tentative retente Marqueur si le relevé précède 5 h', async () => {
   const { cache, output, fail } = await setup();
   await exportPages(cache, output);
   const snapshot = cache.snapshot!;
@@ -121,8 +118,7 @@ test('le secours de 6 h retente Marqueur si le relevé précède 5 h', async () 
   Date.now = () => Date.parse('2026-10-02T10:00:00Z');
   try {
     fail();
-    const result = await exportPages(cache, output, undefined, { daily: true, scheduled: true });
-    assert.equal(result.skipped, false);
+    const result = await exportPages(cache, output, undefined, { daily: true });
     assert.equal(result.failed, true);
     assert.equal(result.fetchedAt, stamp);
     assert.match(cache.error!, /503/);

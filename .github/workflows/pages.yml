@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
   schedule:
     # Heure du Québec, changements d’heure inclus ; déclenchement approximatif.
-    - cron: '0 5 * * *'
-      timezone: America/Toronto
-    - cron: '0 6 * * *'
+    - cron: '17,47 5-13 * * *'
       timezone: America/Toronto
 
 permissions:
@@ -29,26 +27,36 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Vérifier si le relevé du jour est déjà publié
+        id: published
+        run: node --experimental-strip-types server/check-published.ts
+        env:
+          PAGES_STANDING_URL: https://kcote84.github.io/POOL-2026/data/standing.json
       - uses: actions/setup-node@v4
+        if: steps.published.outputs.required == 'true'
         with:
           node-version: '24'
           cache: npm
       - run: npm ci
+        if: steps.published.outputs.required == 'true'
       - name: Vérifier les extracteurs et le cache
+        if: steps.published.outputs.required == 'true'
         run: npm test
       - name: Installer Chromium pour les parcours utilisateurs
-        if: github.event_name != 'schedule'
+        if: steps.published.outputs.required == 'true' && github.event_name != 'schedule'
         run: npx playwright install --with-deps chromium
       - name: Vérifier les écrans, le dragon et l’accessibilité
-        if: github.event_name != 'schedule'
+        if: steps.published.outputs.required == 'true' && github.event_name != 'schedule'
         run: npm run test:ui
       - name: Restaurer le dernier résultat valide
+        if: steps.published.outputs.required == 'true'
         uses: actions/cache/restore@v4
         with:
           path: .cache/marqueur.json
           key: marqueur-v1-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: marqueur-v1-
       - name: Récupérer Marqueur côté serveur
+        if: steps.published.outputs.required == 'true'
         id: sync
         run: npm run sync:pages
         env:
@@ -56,23 +64,27 @@ jobs:
           SYNC_INTERVAL_MINUTES: '15'
           STALE_AFTER_MINUTES: '1620'
       - name: Conserver le résultat pour le prochain cycle
-        if: ${{ hashFiles('.cache/marqueur.json') != '' }}
+        if: steps.published.outputs.required == 'true' && hashFiles('.cache/marqueur.json') != ''
         uses: actions/cache/save@v4
         with:
           path: .cache/marqueur.json
           key: marqueur-v1-${{ github.run_id }}-${{ github.run_attempt }}
       - name: Compiler pour /POOL-2026/
+        if: steps.published.outputs.required == 'true'
         run: npm run build:pages
       - uses: actions/configure-pages@v5
+        if: steps.published.outputs.required == 'true'
       - uses: actions/upload-pages-artifact@v3
+        if: steps.published.outputs.required == 'true'
         with:
           path: dist
       - name: Publier GitHub Pages
+        if: steps.published.outputs.required == 'true'
         id: deployment
         uses: actions/deploy-pages@v4
 
       - name: Signaler un échec de synchronisation après publication du secours
-        if: steps.sync.outputs.sync_failed == 'true'
+        if: steps.published.outputs.required == 'true' && steps.sync.outputs.sync_failed == 'true'
         run: |
           echo "::error::La récupération Marqueur a échoué. Le dernier relevé disponible a été conservé. Consulter les journaux de synchronisation."
           exit 1
