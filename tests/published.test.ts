@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { publicationRequired } from '../server/check-published';
+import { publicationRequired, forceRequested } from '../server/check-published';
 
 const now = Date.parse('2026-10-07T14:00:00Z');
 const valid = {
@@ -31,4 +31,12 @@ test('heure d’hiver : le relevé doit avoir été récupéré après 5 h au Qu
   for (const [stamp, required] of [['2026-12-07T09:59:59Z', true], ['2026-12-07T10:17:00Z', false]] as const) {
     assert.equal(await publicationRequired('https://example.com/standing.json', winterNow, serve({ ...valid, meta: { fetchedAt: stamp, error: null } })), required);
   }
+});
+
+test('déclencheur externe et horaire respectent le relevé publié ; push et demande forcée récupèrent', () => {
+  assert.equal(forceRequested('schedule'), false);
+  assert.equal(forceRequested('workflow_dispatch', 'false'), false);
+  assert.equal(forceRequested('workflow_dispatch'), false);
+  assert.equal(forceRequested('workflow_dispatch', 'true'), true);
+  assert.equal(forceRequested('push'), true);
 });

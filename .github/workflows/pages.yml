@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      force:
+        description: Forcer la récupération même si le relevé du jour est publié
+        type: boolean
+        default: false
   schedule:
     # Heure du Québec, changements d’heure inclus ; déclenchement approximatif.
     - cron: '17,47 5-13 * * *'
@@ -31,6 +36,7 @@ jobs:
         id: published
         run: node --experimental-strip-types server/check-published.ts
         env:
+          FORCE_SYNC: ${{ inputs.force }}
           PAGES_STANDING_URL: https://kcote84.github.io/POOL-2026/data/standing.json
       - uses: actions/setup-node@v4
         if: steps.published.outputs.required == 'true'
@@ -43,10 +49,10 @@ jobs:
         if: steps.published.outputs.required == 'true'
         run: npm test
       - name: Installer Chromium pour les parcours utilisateurs
-        if: steps.published.outputs.required == 'true' && github.event_name != 'schedule'
+        if: steps.published.outputs.required == 'true' && (github.event_name == 'push' || inputs.force == true)
         run: npx playwright install --with-deps chromium
       - name: Vérifier les écrans, le dragon et l’accessibilité
-        if: steps.published.outputs.required == 'true' && github.event_name != 'schedule'
+        if: steps.published.outputs.required == 'true' && (github.event_name == 'push' || inputs.force == true)
         run: npm run test:ui
       - name: Restaurer le dernier résultat valide
         if: steps.published.outputs.required == 'true'

@@ -25,8 +25,13 @@ export async function publicationRequired(url: string, now = Date.now(), fetcher
   }
 }
 
+// Les déclencheurs externes utilisent workflow_dispatch avec force=false.
+export function forceRequested(event?: string, force?: string): boolean {
+  return event !== 'schedule' && event !== 'workflow_dispatch' || event === 'workflow_dispatch' && force === 'true';
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const required = process.env.GITHUB_EVENT_NAME !== 'schedule'
+  const required = forceRequested(process.env.GITHUB_EVENT_NAME, process.env.FORCE_SYNC)
     || await publicationRequired(process.env.PAGES_STANDING_URL!);
   const message = required ? 'Relevé absent, ancien ou non vérifiable : synchronisation nécessaire.'
     : 'Relevé du jour déjà publié : arrêt sans installation, appel Marqueur ni compilation.';
