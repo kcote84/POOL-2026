@@ -15,6 +15,7 @@ on:
       timezone: America/Toronto
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -82,12 +83,65 @@ jobs:
         if: steps.published.outputs.required == 'true'
       - uses: actions/upload-pages-artifact@v3
         if: steps.published.outputs.required == 'true'
+        id: pages_artifact
         with:
           path: dist
+          name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Attendre la disponibilité de l’artéfact Pages
+        if: steps.published.outputs.required == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ steps.pages_artifact.outputs.artifact_id }}
+          ARTIFACT_NAME: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          node --input-type=module <<'JS'
+          const {GITHUB_API_URL, GITHUB_REPOSITORY, GITHUB_RUN_ID, GH_TOKEN, ARTIFACT_ID, ARTIFACT_NAME} = process.env;
+          if (!/^\d+$/.test(ARTIFACT_ID ?? '') || !ARTIFACT_NAME || !GH_TOKEN) {
+            throw new Error('Métadonnées d’envoi Pages manquantes.');
+          }
+          const url = new URL(`${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts`);
+          url.searchParams.set('name', ARTIFACT_NAME);
+          url.searchParams.set('per_page', '100');
+          const deadline = Date.now() + 60_000;
+          let verified = false;
+          while (Date.now() < deadline) {
+            let response;
+            try {
+              response = await fetch(url, {
+                headers: {Accept: 'application/vnd.github+json', Authorization: `Bearer ${GH_TOKEN}`},
+                signal: AbortSignal.timeout(Math.min(5000, Math.max(1, deadline - Date.now()))),
+              });
+            } catch (error) {
+              console.log(`Lecture temporairement indisponible : ${error.name}`);
+            }
+            if (response?.ok) {
+              const {artifacts, total_count} = await response.json();
+              const matching = artifacts.filter(artifact => artifact.name === ARTIFACT_NAME);
+              if (matching.length > 1 || total_count > 1) throw new Error('Plusieurs artéfacts portent le nom de cette tentative.');
+              if (matching.length === 1) {
+                const [artifact] = matching;
+                if (String(artifact.id) !== ARTIFACT_ID || artifact.expired !== false) {
+                  throw new Error('L’artéfact visible ne correspond pas à l’envoi valide de cette tentative.');
+                }
+                console.log(`Artéfact Pages vérifié : ${ARTIFACT_NAME} (ID ${ARTIFACT_ID})`);
+                verified = true;
+                break;
+              }
+            } else if (response && ![404, 429].includes(response.status) && response.status < 500) {
+              throw new Error(`Vérification de l’artéfact refusée : HTTP ${response.status}`);
+            }
+            const remaining = deadline - Date.now();
+            if (remaining <= 0) throw new Error('Artéfact Pages non visible dans le délai.');
+            await new Promise(resolve => setTimeout(resolve, Math.min(3000, remaining)));
+          }
+          if (!verified) throw new Error('Artéfact Pages non visible dans le délai.');
+          JS
       - name: Publier GitHub Pages
         if: steps.published.outputs.required == 'true'
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Signaler un échec de synchronisation après publication du secours
         if: steps.published.outputs.required == 'true' && steps.sync.outputs.sync_failed == 'true'
