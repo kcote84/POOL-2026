@@ -139,9 +139,66 @@ jobs:
       - name: Publier GitHub Pages
         if: steps.published.outputs.required == 'true'
         id: deployment
-        uses: actions/deploy-pages@v4
-        with:
-          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ steps.pages_artifact.outputs.artifact_id }}
+        run: |
+          node --input-type=module <<'JS'
+          import { appendFile } from 'node:fs/promises';
+          
+          const env = process.env;
+          const artifactId = Number(env.ARTIFACT_ID);
+          if (!Number.isSafeInteger(artifactId) || artifactId <= 0) throw new Error('ID Pages invalide.');
+          const oidc = new URL(env.ACTIONS_ID_TOKEN_REQUEST_URL);
+          const oidcResponse = await fetch(oidc, {
+            headers: { Authorization: `Bearer ${env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` },
+            redirect: 'error', signal: AbortSignal.timeout(10_000),
+          });
+          if (!oidcResponse.ok) throw new Error(`Jeton OIDC refusé : HTTP ${oidcResponse.status}.`);
+          const { value: token } = await oidcResponse.json();
+          if (!token) throw new Error('Jeton OIDC absent.');
+          
+          const api = `${env.GITHUB_API_URL}/repos/${env.GITHUB_REPOSITORY}/pages/deployments`;
+          const headers = {
+            Accept: 'application/vnd.github+json', Authorization: `Bearer ${env.GH_TOKEN}`,
+            'Content-Type': 'application/json',
+          };
+          const request = (url, opts = {}) => fetch(url, {
+            ...opts, headers, redirect: 'error', signal: AbortSignal.timeout(10_000),
+          });
+          const response = await request(api, {
+            method: 'POST',
+            body: JSON.stringify({ artifact_id: artifactId, pages_build_version: env.GITHUB_SHA, oidc_token: token }),
+          });
+          if (!response.ok) throw new Error(`Création Pages refusée : HTTP ${response.status} (artéfact ${artifactId}).`);
+          const deployment = await response.json();
+          const id = String(deployment.id ?? deployment.status_url?.split('/').pop() ?? '');
+          if (!/^[a-zA-Z0-9_-]+$/.test(id)) throw new Error('Référence de déploiement invalide.');
+          console.log(`Déploiement Pages ${id} créé avec l’artéfact ${artifactId}.`);
+          
+          const deadline = Date.now() + 300_000;
+          let published = false;
+          const final = new Set(['deployment_failed','deployment_perms_error','deployment_content_failed','deployment_cancelled','deployment_lost']);
+          while (Date.now() < deadline) {
+            let statusResponse;
+            try { statusResponse = await request(`${api}/${id}`); }
+            catch (error) { console.log(`Lecture Pages réessayée : ${error.name}`); }
+            if (statusResponse?.ok) {
+              const { status } = await statusResponse.json();
+              if (status === 'succeed') {
+                await appendFile(env.GITHUB_OUTPUT, 'page_url=https://kcote84.github.io/POOL-2026/\n');
+                console.log(`Déploiement Pages ${id} réussi, artéfact ${artifactId}.`);
+                published = true;
+                break;
+              }
+              if (final.has(status)) throw new Error(`Déploiement Pages ${id} : ${status}.`);
+            } else if (statusResponse && ![404, 429].includes(statusResponse.status) && statusResponse.status < 500) {
+              throw new Error(`Lecture du déploiement Pages refusée : HTTP ${statusResponse.status}.`);
+            }
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+          if (!published) throw new Error(`Déploiement Pages ${id} non confirmé dans le délai; ne pas relancer sans vérifier son état.`);
+          JS
 
       - name: Signaler un échec de synchronisation après publication du secours
         if: steps.published.outputs.required == 'true' && steps.sync.outputs.sync_failed == 'true'
